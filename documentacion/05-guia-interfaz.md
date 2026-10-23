@@ -1574,3 +1574,101 @@ La revisión deberá comprobar:
 Después de aprobar el prototipo se podrán ajustar las reglas de este documento si se detectan mejoras necesarias.
 
 La versión aprobada del prototipo será la referencia visual principal para la primera implementación Angular.
+
+## Estado del prototipo visual
+
+El prototipo visual del MVP fue consolidado en:
+
+`referencia/prototipo-interfaz/Prototipo Interfaz v2.dc.html`
+
+El prototipo cubre las 10 pantallas del MVP:
+
+1. Resumen
+2. Activos
+3. Aportes
+4. Transacciones
+5. Referidos
+6. Dividendos
+7. Precios
+8. Posiciones
+9. Rendimiento
+10. Ayuda
+
+### Estado actual
+
+El prototipo fue revisado y refinado con Claude Design e Impeccable.
+
+Se validaron y ajustaron especialmente:
+
+- jerarquía visual;
+- layout de tablas en escritorio;
+- comportamiento responsive;
+- representación móvil de tablas densas;
+- legibilidad de gráficos;
+- tamaños táctiles;
+- consistencia visual entre pantallas;
+- tipografía;
+- accesibilidad básica;
+- navegación móvil.
+
+El prototipo queda aprobado como referencia visual para la implementación en Angular.
+
+### Criterios aprobados
+
+- tema oscuro como tema oficial del MVP;
+- navegación lateral en escritorio;
+- navegación compacta en móvil;
+- Hanken Grotesk como tipografía principal;
+- Geist Mono para tickers y valores que requieren precisión visual;
+- formularios laterales en pantallas de registro cuando el ancho lo permite;
+- representación compacta de datos en móvil;
+- evitar scroll horizontal innecesario;
+- mantener scroll horizontal únicamente en tablas analíticas donde aporte valor;
+- mantener franjas de color asociadas a activos;
+- evitar cards, bordes, sombras y degradados innecesarios;
+- mantener una composición sobria y específica del producto.
+
+### Responsividad
+
+El prototipo fue validado en distintos anchos, incluyendo:
+
+- 390 px;
+- 768 px;
+- 1024 px;
+- 1280 px;
+- 1440 px;
+- 1920 px.
+
+En pantallas pequeñas se prioriza:
+
+- información financiera esencial;
+- bloques compactos en lugar de tablas extensas;
+- objetivos táctiles cómodos;
+- gráficos con etiquetas legibles;
+- navegación clara hacia formularios.
+
+### Pendientes funcionales
+
+Los siguientes puntos no se resuelven en el prototipo visual y deben definirse mediante especificaciones:
+
+- validación de ventas contra cantidad disponible;
+- confirmación de fotografías del portafolio;
+- estrategia para corregir registros inmutables;
+- método de costo para ventas;
+- umbral definitivo de desviación de asignación;
+- validaciones de negocio adicionales.
+
+Estas decisiones no deben ser inferidas por la interfaz ni por herramientas de diseño.
+
+### Regla para implementación
+
+El prototipo es una referencia visual aprobada, no una restricción absoluta.
+
+Durante la implementación Angular pueden realizarse ajustes si:
+
+- mejoran la usabilidad;
+- resuelven limitaciones del framework o librerías;
+- mejoran responsive o accesibilidad;
+- no contradicen las reglas funcionales aprobadas.
+
+Los cambios importantes de diseño deberán reflejarse nuevamente en esta guía o en el sistema de diseño correspondiente.
