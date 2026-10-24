@@ -146,36 +146,14 @@ NUMERIC(28,12)
 
 # 8. Estados
 
-Cuando una tabla necesite indicar si un registro está vigente o no, se utilizará una columna:
+Cuando una tabla realmente necesite representar un estado funcional,
+se utilizará una columna `estado` con valores explícitos en lugar de
+booleanos ambiguos.
 
-estado
+La existencia de esta convención no implica que todas las tablas deban
+tener estado.
 
-en lugar de columnas booleanas como:
-
-activo = true
-
-o:
-
-activo = false
-
-Esto evita confusión con la tabla y el concepto financiero llamado `activo`.
-
-Valores iniciales de estado:
-
-- ACTIVO
-- INACTIVO
-
-Ejemplo:
-
-BTC
-estado = ACTIVO
-
-No se utilizará:
-
-BTC
-activo = true
-
----
+La tabla `activo` no utiliza estado en el MVP.
 
 # 9. Tabla activo
 
@@ -192,7 +170,6 @@ activo
 - nombre VARCHAR(150) NOT NULL
 - tipo_activo VARCHAR(30) NOT NULL
 - moneda VARCHAR(10) NOT NULL
-- estado VARCHAR(20) NOT NULL
 - fecha_creacion TIMESTAMPTZ NOT NULL
 - fecha_actualizacion TIMESTAMPTZ NOT NULL
 
@@ -219,15 +196,6 @@ IVV
 VXUS
 
 BTC
-
-## Reglas
-
-- El símbolo identifica de forma única al activo.
-- Un activo inactivo no debe perder su historial.
-- Un activo no se elimina físicamente por una desactivación normal.
-- El estado deberá cambiarse a INACTIVO cuando ya no se quiera utilizar para nuevas operaciones.
-
----
 
 # 10. Tabla aporte
 

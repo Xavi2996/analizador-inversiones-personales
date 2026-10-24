@@ -42,7 +42,6 @@ Un activo debe contener:
 - tipo de activo,
 - moneda,
 - porcentaje objetivo,
-- estado.
 
 ---
 
@@ -60,8 +59,10 @@ Los tipos permitidos inicialmente serán:
 
 - El símbolo debe identificar de forma única al activo.
 - Un activo puede existir aunque todavía no tenga transacciones.
-- Un activo podrá marcarse como inactivo.
-- Un activo inactivo no debe eliminar su historial.
+- Un activo permanece registrado aunque actualmente no exista una posición abierta.
+- La existencia de una posición depende de su cantidad actual calculada, no de un estado manual del activo.
+- Si la cantidad actual de un activo es cero, no debe aparecer entre las posiciones actuales.
+- El historial del activo debe conservarse aunque su cantidad actual sea cero.
 - El tipo del activo no deberá ingresarse repetidamente en cada transacción.
 - El porcentaje objetivo podrá modificarse sin alterar operaciones históricas.
 

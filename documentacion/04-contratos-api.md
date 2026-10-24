@@ -139,7 +139,6 @@ Respuesta 201:
 "nombre": "iShares Core S&P 500 ETF",
 "tipoActivo": "ETF",
 "moneda": "USD",
-"estado": "ACTIVO"
 }
 
 ---
@@ -157,7 +156,6 @@ Respuesta 200:
 "nombre": "iShares Core S&P 500 ETF",
 "tipoActivo": "ETF",
 "moneda": "USD",
-"estado": "ACTIVO"
 }
 ]
 
@@ -180,27 +178,6 @@ Solicitud:
 "tipoActivo": "ETF",
 "moneda": "USD"
 }
-
----
-
-## 8.5 Cambiar estado
-
-PATCH /api/v1/activos/{id}/estado
-
-Solicitud:
-
-{
-"estado": "INACTIVO"
-}
-
-Respuesta:
-
-{
-"id": 1,
-"estado": "INACTIVO"
-}
-
-No se utilizará eliminación física para desactivar un activo.
 
 ---
 
@@ -496,7 +473,6 @@ Respuesta:
 "activoId": 1,
 "simbolo": "IVV",
 "porcentajeObjetivo": 85.00,
-"estado": "ACTIVO"
 }
 
 ---
@@ -504,18 +480,6 @@ Respuesta:
 ## 14.2 Listar asignaciones
 
 GET /api/v1/asignaciones
-
----
-
-## 14.3 Cambiar estado de asignación
-
-PATCH /api/v1/asignaciones/{activoId}/estado
-
-Solicitud:
-
-{
-"estado": "INACTIVO"
-}
 
 ---
 
@@ -675,8 +639,6 @@ Ejemplos:
 ACTIVO_NO_ENCONTRADO
 
 SIMBOLO_DUPLICADO
-
-ACTIVO_INACTIVO
 
 APORTE_INVALIDO
 

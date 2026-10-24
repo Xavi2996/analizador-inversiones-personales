@@ -596,15 +596,6 @@ Ejemplos:
 
 - Ver
 - Editar
-- Cambiar estado
-
-No se mostrará:
-
-Eliminar
-
-cuando la funcionalidad utilice:
-
-estado = INACTIVO
 
 ---
 
@@ -731,21 +722,7 @@ Los datos actuales no deberán ingresarse manualmente dentro del referido.
 
 # 27. Estados
 
-Los estados utilizarán etiquetas visuales consistentes.
-
-Ejemplo:
-
-ACTIVO
-
-INACTIVO
-
-La forma concreta podrá representarse mediante:
-
-- etiqueta,
-- distintivo,
-- texto acompañado de icono.
-
----
+Los estados que s emuestran son los ACTIVOS
 
 # 28. Posiciones
 
@@ -919,12 +896,6 @@ Cuando sea posible se deberá mostrar una orientación para corregir el problema
 
 Las acciones importantes podrán mostrar confirmación.
 
-Ejemplo:
-
-¿Deseas marcar este activo como INACTIVO?
-
-No se utilizarán confirmaciones innecesarias para cada acción.
-
 ---
 
 # 39. Mensajes de éxito
@@ -1061,15 +1032,15 @@ Deberá diferenciarse del botón principal sin competir visualmente.
 
 ---
 
-## 46.3 Advertencia
+## Activos
 
-Ejemplo:
+Permitirá validar:
 
-Marcar INACTIVO
-
-Las acciones sensibles deberán diferenciarse claramente.
-
----
+- tabla,
+- información del instrumento,
+- asignación objetivo,
+- acciones de edición,
+- formulario de registro.
 
 # 47. Iconos
 
