@@ -138,7 +138,7 @@ Respuesta 201:
 "simbolo": "IVV",
 "nombre": "iShares Core S&P 500 ETF",
 "tipoActivo": "ETF",
-"moneda": "USD",
+"moneda": "USD"
 }
 
 ---
@@ -155,7 +155,7 @@ Respuesta 200:
 "simbolo": "IVV",
 "nombre": "iShares Core S&P 500 ETF",
 "tipoActivo": "ETF",
-"moneda": "USD",
+"moneda": "USD"
 }
 ]
 
@@ -378,11 +378,7 @@ Solicitud:
 
 El backend calculará:
 
-montoNeto =
-montoBruto
-
-- retencion
-- otrosCargos
+montoNeto = montoBruto - retencion - otrosCargos
 
 Respuesta 201:
 
@@ -472,7 +468,7 @@ Respuesta:
 {
 "activoId": 1,
 "simbolo": "IVV",
-"porcentajeObjetivo": 85.00,
+"porcentajeObjetivo": 85.00
 }
 
 ---
@@ -546,6 +542,14 @@ Respuesta conceptual:
 Los valores son ejemplos basados en el Excel de referencia.
 
 Los resultados reales dependerán de los datos y precios almacenados.
+
+`valorActualPosiciones` incluye el valor de los activos recibidos por referidos. `valorActualReferidos` se informa por separado como desglose y no se vuelve a sumar:
+
+valorTotalPortafolio = valorActualPosiciones + efectivoDisponible
+
+En cambio, en la fotografía (§17) `valorInversiones` excluye los referidos:
+
+valorTotal = valorInversiones + valorReferidos + efectivo
 
 ---
 

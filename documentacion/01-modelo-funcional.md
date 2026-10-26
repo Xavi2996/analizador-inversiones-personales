@@ -40,8 +40,9 @@ Un activo debe contener:
 - símbolo,
 - nombre,
 - tipo de activo,
-- moneda,
-- porcentaje objetivo,
+- moneda.
+
+Además, cada activo puede tener un porcentaje objetivo, que se gestiona como asignación objetivo asociada (ver sección 8).
 
 ---
 
@@ -190,7 +191,7 @@ monto bruto - comisión
 - La cantidad debe ser mayor que cero.
 - El precio debe ser mayor que cero.
 - La comisión no puede ser negativa.
-- No se debe permitir una venta superior a la cantidad disponible.
+- La validación de ventas contra la cantidad disponible se definirá en la especificación de Transacciones.
 - Las posiciones deben derivarse de las transacciones.
 - Una transacción histórica no debe alterar automáticamente otras operaciones.
 
@@ -293,10 +294,9 @@ Un dividendo contiene:
 
 El monto neto se calcula como:
 
-monto bruto
-
-- retención
-- otros cargos
+```text
+monto neto = monto bruto - retención - otros cargos
+```
 
 ---
 
@@ -356,7 +356,7 @@ Ejemplo actual:
 ## 8.2 Reglas
 
 - Cada porcentaje debe estar entre 0% y 100%.
-- La suma de asignaciones activas debería ser 100%.
+- La suma de las asignaciones objetivo debería ser 100%.
 - Si no suma 100%, el sistema debe advertirlo.
 - El sistema no realizará operaciones automáticamente para corregir diferencias.
 
@@ -378,11 +378,9 @@ No se registra manualmente.
 
 Se calcula como:
 
-cantidad comprada
-
-- cantidad vendida
-
-* cantidad recibida por referidos
+```text
+cantidad actual = cantidad comprada - cantidad vendida + cantidad recibida por referidos
+```
 
 ---
 
@@ -512,9 +510,9 @@ Debe mostrar al menos:
 
 Conceptualmente:
 
-valor de posiciones
-
-- efectivo disponible
+```text
+valor total = valor de posiciones + efectivo disponible
+```
 
 El valor de las posiciones incluye los activos provenientes de compras y referidos.
 
@@ -524,9 +522,9 @@ El valor de las posiciones incluye los activos provenientes de compras y referid
 
 Conceptualmente:
 
-valor total del portafolio
-
-- total aportado desde bolsillo
+```text
+resultado = valor total del portafolio - total aportado desde bolsillo
+```
 
 ---
 

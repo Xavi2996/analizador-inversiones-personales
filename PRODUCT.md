@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Decidido en `documentacion/03-arquitectura.md`: frontend Angular, backend Java 21 + Spring Boot (Spring Web, Spring Data JPA), PostgreSQL con Flyway, Docker Compose para la base de datos en local. La librería de componentes (Angular Material, PrimeNG, componentes propios u otra) sigue sin decidir (`05-guia-interfaz.md` §51). `frontend/` y `backend/` existen pero todavía están vacíos.
+Decidido en `documentacion/03-arquitectura.md`: frontend Angular, backend Java 21 + Spring Boot (Spring Web, Spring Data JPA), PostgreSQL con Flyway, Docker Compose para la base de datos en local. La librería de componentes (Angular Material, PrimeNG, componentes propios u otra) sigue sin decidir (`05-guia-interfaz.md` §51). `backend/` y `frontend/` tienen la base técnica (FASE 1), sin funcionalidades de negocio todavía.
 
 ## Users
 
@@ -49,13 +49,13 @@ Separa con rigor lo que una hoja de cálculo o una app de intermediario suelen m
 
 - Nombre: **Analizador de Inversiones Personales**.
 - `documentacion/05-guia-interfaz.md` es una referencia visual importante y vinculante: con ella se creó el prototipo en Claude Design. Fija tema oscuro como tema oficial del MVP (sin tema claro), paleta y tipografía iniciales, principios visuales, patrones a evitar y el orden de prioridad de referencias: requisitos funcionales → especificaciones → guía de interfaz → prototipo aprobado → criterios de Impeccable.
-- El prototipo aprobado será la referencia visual concreta para la implementación Angular. La versión v2 importada de Claude Design está en `referencia/prototipo-interfaz/Prototipo Interfaz v2.dc.html` (con su runtime `support.js`); está pendiente de revisión y aprobación.
+- El prototipo aprobado será la referencia visual concreta para la implementación Angular. La versión v2 importada de Claude Design está en `referencia/prototipo-interfaz/Prototipo Interfaz v2.dc.html` (con su runtime `support.js`) y está aprobada (ver `05-guia-interfaz.md`, "Estado del prototipo visual").
 - Impeccable complementa el diseño; nunca modifica reglas financieras, cálculos, datos, contratos de API ni el alcance.
 
 ## Evidence on Hand
 
 - `referencia/registro_inversiones_v4_1.xlsx`: datos reales y fórmulas de referencia.
-- `documentacion/00` a `05`: alcance, modelo funcional, base de datos, arquitectura, contratos de API y guía de interfaz. `06-convenciones.md`, `07-hoja-ruta.md` y `specs/README.md` están vacíos.
+- `documentacion/00` a `07`: alcance, modelo funcional, base de datos, arquitectura, contratos de API, guía de interfaz, convenciones y hoja de ruta. `specs/001-activos.md` está en borrador; `specs/README.md` está vacío.
 - Caso de referido real: BTC 0.00001196 recibido a 83580.27 USD (valor recibido 1.00 USD).
 - Ejemplo de aporte: 250.00 USD enviados, 243.33 USD recibidos, 6.67 USD de costo de fondeo.
 - No hay testimonios, usuarios externos ni métricas de uso. No deben inventarse.

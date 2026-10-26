@@ -311,15 +311,12 @@ utilizando:
 
 Se utilizará una tipografía sans-serif moderna y legible.
 
-Preferencias iniciales:
+Tipografía aprobada en el prototipo:
 
-- Inter,
-- Roboto,
-- fuente del sistema.
+- Hanken Grotesk como tipografía principal;
+- Geist Mono para tickers y valores que requieren precisión visual.
 
-Se evitará cargar múltiples familias tipográficas.
-
-La tipografía definitiva podrá validarse durante el prototipo.
+No se cargarán familias tipográficas adicionales a estas dos.
 
 ---
 
@@ -722,7 +719,7 @@ Los datos actuales no deberán ingresarse manualmente dentro del referido.
 
 # 27. Estados
 
-Los estados que s emuestran son los ACTIVOS
+Los activos no tienen estado ni se activan o desactivan. Todos los activos registrados aparecen en el catálogo y en los selectores. Un activo con cantidad actual cero no aparece en Posiciones.
 
 # 28. Posiciones
 
@@ -1007,7 +1004,7 @@ no deberá ser azul en una pantalla y verde en otra sin una razón definida.
 
 # 46. Botones
 
-Se contemplarán tres tipos principales.
+Se contemplarán dos tipos principales.
 
 ## 46.1 Primario
 
@@ -1031,16 +1028,6 @@ Ejemplos:
 Deberá diferenciarse del botón principal sin competir visualmente.
 
 ---
-
-## Activos
-
-Permitirá validar:
-
-- tabla,
-- información del instrumento,
-- asignación objetivo,
-- acciones de edición,
-- formulario de registro.
 
 # 47. Iconos
 
@@ -1481,8 +1468,8 @@ Permitirá validar:
 Permitirá validar:
 
 - tabla,
-- estados,
-- acciones,
+- asignación objetivo,
+- acciones de edición,
 - formulario de registro.
 
 ## Aportes
@@ -1630,6 +1617,20 @@ Los siguientes puntos no se resuelven en el prototipo visual y deben definirse m
 - validaciones de negocio adicionales.
 
 Estas decisiones no deben ser inferidas por la interfaz ni por herramientas de diseño.
+
+### Diferencias conocidas con el prototipo
+
+La pantalla Activos del prototipo es anterior a la decisión de que los
+activos no tienen estado. No deben implementarse:
+
+- la columna Estado;
+- las acciones Activar / Desactivar y su diálogo de confirmación;
+- el activo de ejemplo VT marcado como inactivo;
+- el texto "Los activos no se eliminan, se desactivan";
+- la nota del tutorial "Registrar activo" que indica marcarlo como INACTIVO.
+
+La columna `Activo?` de la hoja Activos del Excel de referencia tampoco
+se traslada a la aplicación.
 
 ### Regla para implementación
 

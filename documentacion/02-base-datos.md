@@ -184,11 +184,6 @@ activo
 - ETF
 - CRIPTOMONEDA
 
-## Valores iniciales de estado
-
-- ACTIVO
-- INACTIVO
-
 ## Ejemplos
 
 IVV
@@ -409,7 +404,6 @@ asignacion_objetivo
 - id BIGINT
 - activo_id BIGINT NOT NULL
 - porcentaje_objetivo NUMERIC(8,4) NOT NULL
-- estado VARCHAR(20) NOT NULL
 - fecha_creacion TIMESTAMPTZ NOT NULL
 - fecha_actualizacion TIMESTAMPTZ NOT NULL
 
@@ -424,15 +418,10 @@ activo_id
 - porcentaje_objetivo >= 0
 - porcentaje_objetivo <= 100
 
-## Valores iniciales de estado
-
-- ACTIVO
-- INACTIVO
-
 ## Reglas
 
-- La aplicación deberá validar que la suma de las asignaciones con estado ACTIVO sea 100%.
-- Una asignación con estado INACTIVO no participará en el cálculo del objetivo actual.
+- La aplicación deberá advertir cuando la suma de las asignaciones no sea 100%.
+- Para excluir un activo del objetivo se asigna 0%.
 
 ---
 

@@ -174,22 +174,35 @@ Es únicamente una referencia del comportamiento esperado.
 
 ---
 
-# 8. Backend
+# 8. Backend/Frontend
 
-El backend utilizará:
+## Backend
 
-- Java 21,
-- Spring Boot,
-- Spring Web,
-- Spring Data JPA,
-- Validation,
-- PostgreSQL,
-- Flyway,
-- Maven.
+- Java 21
+- Spring Boot 4.1.2
+- Maven
+- Spring Web MVC
+- Spring Data JPA
+- Validation
+- PostgreSQL 17
+- Flyway
 
 El backend será una sola aplicación.
 
 No se utilizarán microservicios en el MVP.
+
+## Frontend
+
+- Angular 22.2
+- TypeScript 6.0
+- RxJS 7.8
+- Standalone Components
+- Reactive Forms
+- Signals
+- HttpClient
+- Router
+- Vitest
+- npm
 
 ---
 

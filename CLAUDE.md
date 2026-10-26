@@ -288,7 +288,7 @@ cambio arquitectónico
 → actualizar arquitectura
 
 cambio visual global
-→ actualizar guía de interfaz / DESIGN.md
+→ actualizar guía de interfaz (y DESIGN.md cuando exista)
 
 nueva regla financiera
 → actualizar spec y documentación funcional cuando corresponda

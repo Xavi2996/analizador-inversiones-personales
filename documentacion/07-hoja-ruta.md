@@ -222,7 +222,6 @@ Implementar:
 - controlador;
 - DTO;
 - validaciones;
-- estados ACTIVO / INACTIVO.
 
 Operaciones principales:
 
@@ -231,7 +230,6 @@ crear activo
 listar activos
 consultar activo
 actualizar activo
-cambiar estado
 ```
 
 ---
@@ -249,8 +247,6 @@ Debe permitir:
 - consultar activos;
 - registrar activo;
 - editar datos permitidos;
-- activar;
-- desactivar;
 - consultar asignación objetivo.
 
 ---
@@ -263,7 +259,6 @@ Validar al menos:
 - nombre obligatorio;
 - tipo válido;
 - moneda válida;
-- estado;
 - duplicados según regla definida en la spec.
 
 ---
@@ -289,7 +284,7 @@ Implementar:
 Regla principal:
 
 ```text
-costoFondeo = montoAportado - montoNeto
+costoFondeo = montoAportado - montoNetoBroker
 ```
 
 El monto neto recibido será el que incremente el efectivo disponible.

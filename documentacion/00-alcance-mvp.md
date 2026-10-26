@@ -70,9 +70,9 @@ Información mínima:
 - símbolo,
 - nombre,
 - tipo de activo,
-- moneda,
-- porcentaje objetivo,
-- estado.
+- moneda.
+
+Cada activo podrá tener además un porcentaje objetivo (ver 5.7).
 
 Tipos iniciales:
 

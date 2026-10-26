@@ -92,8 +92,8 @@ cantidadDisponible
 Usar `UPPER_SNAKE_CASE`.
 
 ```text
-ESTADO_ACTIVO
 MONEDA_PRINCIPAL
+ESCALA_CANTIDAD
 ESCALA_MONETARIA
 ```
 
@@ -171,7 +171,8 @@ Ejemplo conceptual:
 @PostMapping
 public ResponseEntity<ActivoRespuesta> crear(
         @Valid @RequestBody CrearActivoSolicitud solicitud) {
-    return ResponseEntity.ok(activoServicio.crear(solicitud));
+    return ResponseEntity.status(HttpStatus.CREATED)
+            .body(activoServicio.crear(solicitud));
 }
 ```
 
@@ -325,18 +326,15 @@ como nombre de clave primaria cuando no exista una razón clara para utilizar ot
 
 ### 10.4 Estados
 
-Evitar booleanos ambiguos como:
+Usar una columna `estado` solo cuando una tabla realmente necesite
+representar un estado funcional. En el MVP ninguna tabla lo utiliza.
 
-```text
-activo = true
-```
+Si se necesita, evitar booleanos ambiguos como:
+abierto = true
 
 Preferir estados explícitos:
-
-```text
-estado = 'ACTIVO'
-estado = 'INACTIVO'
-```
+estado = 'ABIERTO'
+estado = 'CERRADO'
 
 ---
 
@@ -437,7 +435,7 @@ Ejemplo:
 ```json
 {
   "montoAportado": 200.0,
-  "montoNeto": 195.58,
+  "montoNetoBroker": 195.58,
   "costoFondeo": 4.42
 }
 ```
@@ -457,11 +455,16 @@ Ejemplo:
   "codigo": "DATOS_INVALIDOS",
   "mensaje": "La solicitud contiene datos inválidos.",
   "ruta": "/api/v1/aportes",
-  "erroresCampos": {
-    "montoNeto": "No puede ser mayor al monto aportado."
-  }
+  "erroresCampos": [
+    {
+      "campo": "montoNetoBroker",
+      "mensaje": "No puede ser mayor al monto aportado."
+    }
+  ]
 }
 ```
+
+La estructura completa está definida en `documentacion/04-contratos-api.md` §7.
 
 Los mensajes técnicos internos no deben exponerse directamente al frontend.
 
@@ -689,7 +692,8 @@ documentacion/05-guia-interfaz.md
 documentacion/06-convenciones.md
 documentacion/07-hoja-ruta.md
 CLAUDE.md
-DESIGN.md
+PRODUCT.md
+DESIGN.md (cuando exista)
 ```
 
 No todos los cambios requieren modificar documentación.
