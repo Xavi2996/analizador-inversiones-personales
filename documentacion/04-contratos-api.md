@@ -722,6 +722,8 @@ DATOS_INVALIDOS
 
 ERROR_INTERNO
 
+SOLICITUD_INVALIDA: errores de la solicitud ajenos a los datos (ruta inexistente, método no permitido, tipo de contenido no soportado). Conserva el estado HTTP real (404, 405, 415…).
+
 APORTE_INVALIDO
 
 TRANSACCION_INVALIDA

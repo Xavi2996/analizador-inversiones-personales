@@ -1,10 +1,10 @@
 package com.personal.inversiones;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class InversionesApplicationTests {
+import com.personal.inversiones.compartido.PruebaIntegracion;
+
+class InversionesApplicationTests extends PruebaIntegracion {
 
 	@Test
 	void contextLoads() {
