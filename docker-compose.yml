@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: inversiones-postgres
+    environment:
+      POSTGRES_DB: inversiones
+      POSTGRES_USER: inversiones
+      POSTGRES_PASSWORD: inversiones
+    ports:
+      - "5432:5432"
+    volumes:
+      - inversiones_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  inversiones_postgres_data:
