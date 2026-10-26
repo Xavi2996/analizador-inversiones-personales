@@ -1642,6 +1642,10 @@ objetivo (`PUT /api/v1/asignaciones/{activoId}`).
 El tipo `CRIPTO` de la hoja Activos del Excel corresponde al tipo
 `CRIPTOMONEDA` de la aplicación.
 
+Al editar un activo, el prototipo muestra el símbolo siempre como
+"No editable". En la aplicación el símbolo es editable mientras el
+activo no tenga registros históricos (`simboloEditable` = `true`).
+
 ### Regla para implementación
 
 El prototipo es una referencia visual aprobada, no una restricción absoluta.

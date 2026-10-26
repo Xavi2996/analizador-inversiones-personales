@@ -215,6 +215,7 @@ Ejemplo conceptual:
 com.personal.inversiones
 │
 ├── activos
+├── asignaciones
 ├── aportes
 ├── transacciones
 ├── referidos
@@ -512,6 +513,10 @@ Spring Boot local
 ↓
 Angular local
 
+En desarrollo, Angular utiliza `proxy.conf.json` para redirigir `/api` hacia el backend local.
+
+Por ello el backend no necesita configurar CORS durante el desarrollo.
+
 Posteriormente podrá evaluarse dockerizar backend y frontend.
 
 No es necesario hacerlo durante las primeras funcionalidades.
@@ -727,6 +732,12 @@ Se dará prioridad a las pruebas de:
 - endpoints principales.
 
 El Excel de referencia permitirá construir casos de prueba conocidos.
+
+Las pruebas de integración del backend utilizarán Testcontainers con PostgreSQL 17.
+
+Así se verifican las migraciones Flyway y las restricciones reales sin depender de la base local.
+
+Testcontainers es una dependencia exclusiva de pruebas y requiere Docker en ejecución.
 
 ---
 

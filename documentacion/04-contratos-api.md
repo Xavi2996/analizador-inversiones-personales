@@ -114,6 +114,10 @@ Campos:
 
 erroresCampos será opcional.
 
+Las validaciones de campo, el JSON mal formado y los valores de enumeración inválidos responden 400 con código `DATOS_INVALIDOS` e incluyen `erroresCampos` cuando aplica.
+
+Los errores inesperados responden 500 con código `ERROR_INTERNO` y un mensaje genérico, sin stack traces, SQL ni nombres de clases.
+
 ---
 
 # 8. Activos
@@ -138,8 +142,23 @@ Respuesta 201:
 "simbolo": "IVV",
 "nombre": "iShares Core S&P 500 ETF",
 "tipoActivo": "ETF",
-"moneda": "USD"
+"moneda": "USD",
+"simboloEditable": true
 }
+
+Reglas:
+
+- `simbolo` se normaliza (sin espacios en los extremos y en mayúsculas) y debe cumplir `^[A-Z0-9.-]{1,20}$`.
+- `nombre` es obligatorio, se recorta y admite de 1 a 150 caracteres.
+- `tipoActivo` admite `ACCION`, `ETF` o `CRIPTOMONEDA`.
+- `moneda` admite únicamente `USD`.
+- `simboloEditable` lo calcula el backend: es `false` cuando el activo tiene transacciones, referidos, dividendos o precios asociados.
+- Las fechas técnicas no se exponen.
+
+Errores:
+
+- 400 `DATOS_INVALIDOS`
+- 409 `SIMBOLO_DUPLICADO`
 
 ---
 
@@ -147,7 +166,7 @@ Respuesta 201:
 
 GET /api/v1/activos
 
-Respuesta 200:
+Respuesta 200, ordenada por `simbolo` ascendente:
 
 [
 {
@@ -155,7 +174,8 @@ Respuesta 200:
 "simbolo": "IVV",
 "nombre": "iShares Core S&P 500 ETF",
 "tipoActivo": "ETF",
-"moneda": "USD"
+"moneda": "USD",
+"simboloEditable": true
 }
 ]
 
@@ -164,6 +184,12 @@ Respuesta 200:
 ## 8.3 Obtener activo
 
 GET /api/v1/activos/{id}
+
+Respuesta 200 con la misma estructura de 8.1.
+
+Errores:
+
+- 404 `ACTIVO_NO_ENCONTRADO`
 
 ---
 
@@ -174,10 +200,26 @@ PUT /api/v1/activos/{id}
 Solicitud:
 
 {
+"simbolo": "IVV",
 "nombre": "iShares Core S&P 500 ETF",
 "tipoActivo": "ETF",
 "moneda": "USD"
 }
+
+Respuesta 200 con la misma estructura de 8.1.
+
+Todos los campos son obligatorios y siguen las reglas de 8.1.
+
+Enviar el mismo símbolo que ya tiene el activo no se considera un cambio.
+
+Errores:
+
+- 400 `DATOS_INVALIDOS`
+- 404 `ACTIVO_NO_ENCONTRADO`
+- 409 `SIMBOLO_DUPLICADO`: el símbolo pertenece a otro activo.
+- 409 `SIMBOLO_BLOQUEADO`: el símbolo cambia y el activo tiene registros históricos relacionados.
+
+No existe `DELETE /api/v1/activos/{id}`.
 
 ---
 
@@ -463,7 +505,7 @@ Solicitud:
 "porcentajeObjetivo": 85.00
 }
 
-Respuesta:
+Respuesta 200, tanto si se crea como si se actualiza:
 
 {
 "activoId": 1,
@@ -471,11 +513,41 @@ Respuesta:
 "porcentajeObjetivo": 85.00
 }
 
+Reglas:
+
+- `porcentajeObjetivo` es obligatorio, debe estar entre 0 y 100 (incluidos) y admite como máximo 4 decimales.
+- Para excluir un activo del objetivo se asigna 0. No existe eliminación de asignaciones.
+
+Errores:
+
+- 400 `DATOS_INVALIDOS`
+- 404 `ACTIVO_NO_ENCONTRADO`
+
 ---
 
 ## 14.2 Listar asignaciones
 
 GET /api/v1/asignaciones
+
+Respuesta 200:
+
+{
+"asignaciones": [
+{ "activoId": 1, "simbolo": "IVV", "porcentajeObjetivo": 85.00 },
+{ "activoId": 2, "simbolo": "VXUS", "porcentajeObjetivo": 10.00 },
+{ "activoId": 3, "simbolo": "BTC", "porcentajeObjetivo": 5.00 }
+],
+"sumaPorcentajes": 100.00,
+"sumaCorrecta": true
+}
+
+Reglas:
+
+- `asignaciones` contiene solo los activos con asignación registrada, ordenados por `simbolo`.
+- `sumaPorcentajes` es la suma de `porcentajeObjetivo`, o 0 si no hay asignaciones.
+- `sumaCorrecta` es `true` únicamente cuando `sumaPorcentajes` es exactamente 100.
+
+El cálculo de la suma pertenece al backend.
 
 ---
 
@@ -643,6 +715,12 @@ Ejemplos:
 ACTIVO_NO_ENCONTRADO
 
 SIMBOLO_DUPLICADO
+
+SIMBOLO_BLOQUEADO
+
+DATOS_INVALIDOS
+
+ERROR_INTERNO
 
 APORTE_INVALIDO
 

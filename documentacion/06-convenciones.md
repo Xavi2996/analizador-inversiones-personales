@@ -131,6 +131,7 @@ Ejemplo:
 ```text
 com.personal.inversiones
 ├── activos
+├── asignaciones
 ├── aportes
 ├── transacciones
 ├── referidos
@@ -581,6 +582,8 @@ Especialmente:
 - ganancia o pérdida;
 - resumen del portafolio;
 - fotografías históricas.
+
+Las pruebas de integración del backend se ejecutan contra PostgreSQL mediante Testcontainers. Requieren Docker en ejecución.
 
 Cuando sea posible, los resultados se compararán con el Excel de referencia:
 

@@ -165,7 +165,7 @@ activo
 
 ## Campos
 
-- id BIGINT
+- id BIGINT GENERATED ALWAYS AS IDENTITY
 - simbolo VARCHAR(20) NOT NULL
 - nombre VARCHAR(150) NOT NULL
 - tipo_activo VARCHAR(30) NOT NULL
@@ -176,7 +176,13 @@ activo
 ## Restricciones
 
 - PRIMARY KEY(id)
-- UNIQUE(simbolo)
+- uk_activo_simbolo: UNIQUE(simbolo)
+- ck_activo_tipo: tipo_activo IN ('ACCION', 'ETF', 'CRIPTOMONEDA')
+- ck_activo_moneda: moneda IN ('USD')
+
+El símbolo se almacena normalizado (sin espacios en los extremos y en mayúsculas).
+
+Agregar una moneda requiere una nueva migración que modifique `ck_activo_moneda`.
 
 ## Valores iniciales de tipo_activo
 
@@ -401,7 +407,7 @@ asignacion_objetivo
 
 ## Campos
 
-- id BIGINT
+- id BIGINT GENERATED ALWAYS AS IDENTITY
 - activo_id BIGINT NOT NULL
 - porcentaje_objetivo NUMERIC(8,4) NOT NULL
 - fecha_creacion TIMESTAMPTZ NOT NULL
@@ -414,14 +420,15 @@ activo_id
 
 ## Restricciones
 
-- UNIQUE(activo_id)
-- porcentaje_objetivo >= 0
-- porcentaje_objetivo <= 100
+- uk_asignacion_activo: UNIQUE(activo_id)
+- ck_asignacion_rango: porcentaje_objetivo >= 0 AND porcentaje_objetivo <= 100
 
 ## Reglas
 
 - La aplicación deberá advertir cuando la suma de las asignaciones no sea 100%.
 - Para excluir un activo del objetivo se asigna 0%.
+- Un activo sin fila en esta tabla no tiene objetivo; para la suma cuenta como 0%.
+- Crear un activo no crea su asignación.
 
 ---
 

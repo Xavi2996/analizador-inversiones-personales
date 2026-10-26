@@ -59,6 +59,11 @@ Los tipos permitidos inicialmente serán:
 ## 2.4 Reglas
 
 - El símbolo debe identificar de forma única al activo.
+- El símbolo se guarda sin espacios en los extremos y en mayúsculas; la unicidad se evalúa sobre ese valor.
+- El símbolo puede modificarse mientras el activo no tenga registros históricos relacionados: transacciones, referidos, dividendos o precios.
+- Cuando exista al menos uno de esos registros, el símbolo queda bloqueado.
+- La asignación objetivo no se considera registro histórico y no bloquea el símbolo.
+- En el MVP la única moneda permitida es USD.
 - Un activo puede existir aunque todavía no tenga transacciones.
 - Un activo permanece registrado aunque actualmente no exista una posición abierta.
 - La existencia de una posición depende de su cantidad actual calculada, no de un estado manual del activo.
