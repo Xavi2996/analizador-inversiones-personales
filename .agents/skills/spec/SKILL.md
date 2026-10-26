@@ -110,7 +110,7 @@ In both cases the content follows the same order:
 
 When the content is ready (either because you had everything, or because all sections were confirmed):
 
-1. Determine the next sequential number from the `specs/` listing in the session context. Take the highest existing number and add one, zero-padded to two digits. If the last one is `02-powerups.md`, this one will be `03-`. If `specs/` is empty or missing, start at `01-`.
+1. Determine the next sequential number from the `specs/` listing in the session context. Take the highest existing number and add one, zero-padded to three digits (project convention, see `documentacion/03-arquitectura.md` §5). If the last one is `002-aportes.md`, this one will be `003-`. If `specs/` is empty or missing, start at `001-`.
 2. Generate a short kebab-case slug from the objective (e.g. `levels-and-highscores`). See **Arguments** below for when `$ARGUMENTS` is the slug instead.
 3. Use the date from the session context above for the `**Date:**` field. **Never write a date you did not read from there.**
 4. Write the file directly at `specs/NN-slug.md` with all the sections. **Do not ask for permission to write it and do not ask whether the file name works** — announce the path in the final confirmation. Only ask if the target file already exists.

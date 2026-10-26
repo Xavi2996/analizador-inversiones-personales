@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Decidido en `documentacion/03-arquitectura.md`: frontend Angular, backend Java 21 + Spring Boot (Spring Web, Spring Data JPA), PostgreSQL con Flyway, Docker Compose para la base de datos en local. La librería de componentes (Angular Material, PrimeNG, componentes propios u otra) sigue sin decidir (`05-guia-interfaz.md` §51). `backend/` y `frontend/` tienen la base técnica (FASE 1), sin funcionalidades de negocio todavía.
+Decidido en `documentacion/03-arquitectura.md`: frontend Angular, backend Java 21 + Spring Boot (Spring Web, Spring Data JPA), PostgreSQL con Flyway, Docker Compose para la base de datos en local. Interfaz con componentes propios y CSS propio, sin librería de componentes (`05-guia-interfaz.md` §51). `backend/` y `frontend/` tienen la base técnica (FASE 1), sin funcionalidades de negocio todavía.
 
 ## Users
 
@@ -42,7 +42,7 @@ Separa con rigor lo que una hoja de cálculo o una app de intermediario suelen m
 - **Historial inmutable:** un precio, una operación o una fotografía nuevos crean un registro nuevo; no se sobrescribe historia.
 - **Ayuda:** disponible desde la interfaz sin abandonar el proceso actual y sin perder lo que se haya escrito en un formulario.
 - **Fuera del alcance:** análisis fundamental, recomendaciones automáticas, operaciones reales, integración con intermediarios, cotizaciones automáticas, múltiples usuarios o portafolios en el MVP, app móvil nativa, IA para decisiones, importación de estados de cuenta, notificaciones y backtesting.
-- **Por decidir:** método de costo para ventas con ganancia realizada (costo promedio o FIFO), que debe especificarse antes de implementar ventas. También la librería de componentes.
+- **Por decidir:** método de costo para ventas con ganancia realizada (costo promedio o FIFO), que debe especificarse antes de implementar ventas.
 - Terminología canónica: activo, aporte, transacción, referido, dividendo, precio, posición, efectivo disponible, resumen, fotografía, asignación objetivo.
 
 ## Brand Commitments
@@ -55,7 +55,7 @@ Separa con rigor lo que una hoja de cálculo o una app de intermediario suelen m
 ## Evidence on Hand
 
 - `referencia/registro_inversiones_v4_1.xlsx`: datos reales y fórmulas de referencia.
-- `documentacion/00` a `07`: alcance, modelo funcional, base de datos, arquitectura, contratos de API, guía de interfaz, convenciones y hoja de ruta. `specs/001-activos.md` está en borrador; `specs/README.md` está vacío.
+- `documentacion/00` a `07`: alcance, modelo funcional, base de datos, arquitectura, contratos de API, guía de interfaz, convenciones y hoja de ruta. `specs/` todavía no tiene especificaciones; la primera será `specs/001-activos.md`. `specs/README.md` está vacío.
 - Caso de referido real: BTC 0.00001196 recibido a 83580.27 USD (valor recibido 1.00 USD).
 - Ejemplo de aporte: 250.00 USD enviados, 243.33 USD recibidos, 6.67 USD de costo de fondeo.
 - No hay testimonios, usuarios externos ni métricas de uso. No deben inventarse.

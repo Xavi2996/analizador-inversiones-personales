@@ -176,10 +176,9 @@ Configuración esperada:
 Inicialmente deberá existir únicamente:
 
 - estructura base;
-- shell principal;
-- navegación;
-- configuración de ambientes;
-- estilos globales.
+- configuración de ambientes.
+
+El shell principal, la navegación y los estilos globales se construyen junto con la primera pantalla (FASE 2), para validarlos con contenido real.
 
 No implementar todavía todas las pantallas.
 
@@ -201,13 +200,13 @@ estructura base preparada
 
 ---
 
-# FASE 2 — Activos
+# FASE 2 — Activos y asignación objetivo
 
 ## Objetivo
 
-Implementar el catálogo base de instrumentos financieros.
+Implementar el catálogo base de instrumentos financieros y su asignación objetivo.
 
-Antes de implementar se deberá crear una especificación para Activos.
+Antes de implementar se deberá crear una especificación para Activos que incluya la asignación objetivo.
 
 ---
 
@@ -215,11 +214,11 @@ Antes de implementar se deberá crear una especificación para Activos.
 
 Implementar:
 
-- tabla `activo`;
-- entidad;
-- repositorio;
-- servicio;
-- controlador;
+- tablas `activo` y `asignacion_objetivo`;
+- entidades;
+- repositorios;
+- servicios;
+- controladores;
 - DTO;
 - validaciones;
 
@@ -230,11 +229,29 @@ crear activo
 listar activos
 consultar activo
 actualizar activo
+crear o actualizar asignación objetivo
+listar asignaciones objetivo
 ```
+
+Endpoints de asignación:
+
+```text
+PUT /api/v1/asignaciones/{activoId}
+GET /api/v1/asignaciones
+```
+
+La asignación objetivo es un recurso propio; no forma parte del contrato de Activo.
+
+El sistema deberá advertir cuando la suma de las asignaciones no sea 100%.
 
 ---
 
 ## Frontend
+
+Implementar el shell principal:
+
+- layout con navegación lateral en escritorio y compacta en móvil;
+- estilos globales del tema oscuro.
 
 Implementar pantalla:
 
@@ -247,7 +264,7 @@ Debe permitir:
 - consultar activos;
 - registrar activo;
 - editar datos permitidos;
-- consultar asignación objetivo.
+- consultar y editar la asignación objetivo.
 
 ---
 
@@ -255,11 +272,13 @@ Debe permitir:
 
 Validar al menos:
 
-- ticker obligatorio;
+- símbolo obligatorio;
 - nombre obligatorio;
 - tipo válido;
 - moneda válida;
-- duplicados según regla definida en la spec.
+- duplicados según regla definida en la spec;
+- porcentaje objetivo entre 0 y 100;
+- advertencia cuando la suma de asignaciones es distinta de 100%.
 
 ---
 

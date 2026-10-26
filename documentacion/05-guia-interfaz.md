@@ -1109,16 +1109,19 @@ No forma parte del MVP inicial.
 
 # 51. Librería visual
 
-No se definirá todavía una librería de componentes definitiva.
+Decisión: el MVP utilizará componentes propios con CSS propio.
 
-Antes de comenzar la implementación Angular se evaluará si utilizar:
+Se descartaron Angular Material y PrimeNG.
 
-- Angular Material,
-- PrimeNG,
-- componentes propios,
-- otra alternativa que resulte adecuada.
+Motivos:
 
-La elección deberá considerar:
+- el prototipo aprobado ya define cada estilo y la paleta de §4;
+- reproducir el prototipo con una librería exigiría sobrescribir gran parte de sus estilos;
+- no se agregan dependencias.
+
+Una librería solo se reevaluará si aparece una necesidad concreta que los componentes propios no cubran razonablemente.
+
+Esa evaluación deberá considerar:
 
 - facilidad de aprendizaje,
 - calidad visual,
@@ -1631,6 +1634,13 @@ activos no tienen estado. No deben implementarse:
 
 La columna `Activo?` de la hoja Activos del Excel de referencia tampoco
 se traslada a la aplicación.
+
+El campo "Porcentaje objetivo" del formulario de activo del prototipo no
+es un dato del activo. Se guarda mediante el recurso de asignación
+objetivo (`PUT /api/v1/asignaciones/{activoId}`).
+
+El tipo `CRIPTO` de la hoja Activos del Excel corresponde al tipo
+`CRIPTOMONEDA` de la aplicación.
 
 ### Regla para implementación
 
