@@ -4,51 +4,40 @@ Aplicación web personal para registrar, consultar y analizar un portafolio de i
 
 El proyecto sigue desarrollo guiado por especificaciones.
 
-## Stack
-
-Backend:
-
-- Java 21
-- Spring Boot
-- Maven
-- Spring Web
-- Spring Data JPA
-- Validation
-- PostgreSQL
-- Flyway
-
-Frontend:
-
-- Angular
-- TypeScript
-- Standalone Components
-- Reactive Forms
-- Signals cuando aporten valor
-- HttpClient
-- Router
-
-## Estructura
-
-```text
-backend/          Backend Spring Boot
-frontend/         Frontend Angular
-documentacion/    Decisiones funcionales y técnicas
-specs/            Especificaciones de funcionalidades
-referencia/       Excel y prototipo visual
-```
-
 ## Documentación del proyecto
 
-Antes de tomar decisiones relevantes, consulta la documentación relacionada.
+Siempre cargado:
 
-@documentacion/00-alcance-mvp.md
 @documentacion/01-modelo-funcional.md
-@documentacion/02-base-datos.md
-@documentacion/03-arquitectura.md
-@documentacion/04-contratos-api.md
-@documentacion/05-guia-interfaz.md
-@documentacion/06-convenciones.md
-@documentacion/07-hoja-ruta.md
+
+El resto de documentos no se carga automáticamente.
+
+Índice de documentación:
+
+- `documentacion/00-alcance-mvp.md` — qué entra y qué no en el MVP.
+- `documentacion/01-modelo-funcional.md` — conceptos y reglas de negocio.
+- `documentacion/02-base-datos.md` — tablas, columnas, restricciones.
+- `documentacion/03-arquitectura.md` — stack, capas, organización del código.
+- `documentacion/04-contratos-api.md` — endpoints, DTO, errores.
+- `documentacion/05-guia-interfaz.md` — reglas visuales y de UX.
+- `documentacion/06-convenciones.md` — nombres, Git, pruebas, migraciones.
+- `documentacion/07-hoja-ruta.md` — fases y qué exige cada una.
+
+Al escribir o implementar una spec (`/spec`, `/spec-impl`), lee todos los documentos del índice antes de empezar.
+
+Fuera de una spec, lee con Read los que correspondan antes de tomar decisiones:
+
+| Si el trabajo toca…                    | Lee                                  |
+| -------------------------------------- | ------------------------------------ |
+| alcance o una nueva funcionalidad      | 00-alcance-mvp, 07-hoja-ruta         |
+| tablas, columnas, migraciones Flyway   | 02-base-datos                        |
+| endpoints, DTO, códigos de error       | 04-contratos-api                     |
+| estructura de paquetes, capas, nombres | 03-arquitectura, 06-convenciones     |
+| pantallas, componentes, estilos        | 05-guia-interfaz                     |
+
+`frontend/CLAUDE.md` y `backend/CLAUDE.md` cargan automáticamente la guía de interfaz y el modelo de base de datos al trabajar en esas carpetas.
+
+Ante la duda, lee el documento.
 
 No dupliques aquí reglas que ya estén definidas en esos documentos.
 
@@ -142,20 +131,6 @@ Los cambios visuales globales deben reflejarse en la documentación correspondie
 ## Backend
 
 Organiza el código por funcionalidad.
-
-Ejemplo:
-
-```text
-com.personal.inversiones
-├── activos
-├── aportes
-├── transacciones
-├── referidos
-├── dividendos
-├── precios
-├── portafolio
-└── compartido
-```
 
 No introduzcas capas o abstracciones sin una necesidad concreta.
 
