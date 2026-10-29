@@ -1,1 +1,111 @@
-/* You can add global styles to this file, and also import other style files */
+/*
+ * Estilos globales del tema oscuro (documentacion/05-guia-interfaz.md §4, §6 y §48).
+ * Los componentes usan estos tokens en lugar de colores literales.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Superficies */
+  --color-fondo: #0b1120;
+  --color-fondo-secundario: #111827;
+  --color-tarjeta: #172033;
+  --color-elevado: #1f2937;
+  --color-borde: #2d3748;
+
+  /* Interacción */
+  --color-principal: #3b82f6;
+  --color-principal-destacado: #60a5fa;
+
+  /* Texto */
+  --color-texto: #f1f5f9;
+  --color-texto-secundario: #94a3b8;
+  --color-texto-terciario: #7c8aa0;
+
+  /* Estados */
+  --color-positivo: #22c55e;
+  --color-negativo: #ef4444;
+  --color-precaucion: #f59e0b;
+  --color-informacion: #38bdf8;
+
+  /* Tipografía */
+  --fuente-principal: 'Hanken Grotesk', system-ui, sans-serif;
+  --fuente-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--fuente-principal);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scrollbar-color: var(--color-borde) var(--color-fondo);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+select option {
+  background: var(--color-fondo-secundario);
+  color: var(--color-texto);
+}
+
+input,
+textarea {
+  caret-color: var(--color-principal-destacado);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-texto-terciario);
+}
+
+a {
+  color: var(--color-principal-destacado);
+}
+
+::selection {
+  background: rgb(59 130 246 / 35%);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-principal-destacado);
+  outline-offset: 2px;
+}
+
+/* Texto solo para lectores de pantalla. */
+.solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Evita el zoom automático de iOS al enfocar campos en móvil. */
+@media (max-width: 879.98px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
