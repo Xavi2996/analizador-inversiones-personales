@@ -199,11 +199,13 @@ Referencia inicial:
 
 ## 4.10 Texto menos relevante
 
-Referencia inicial:
+Valor aprobado:
 
-#64748B
+#7C8AA0
 
 Se utilizará únicamente para información secundaria.
+
+La referencia inicial era #64748B. Se reemplazó por el valor del prototipo aprobado porque sobre el fondo principal (#0B1120) #64748B no alcanza el contraste mínimo de 4.5:1 para texto pequeño, y #7C8AA0 sí lo supera.
 
 ---
 
