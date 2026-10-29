@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.personal.inversiones.activos.dto.ActivoRespuesta;
+import com.personal.inversiones.activos.dto.ActualizarActivoSolicitud;
 import com.personal.inversiones.activos.dto.CrearActivoSolicitud;
 import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.repositorio.ActivoRepositorio;
@@ -19,6 +20,7 @@ public class ActivoServicio {
 
 	public static final String ACTIVO_NO_ENCONTRADO = "ACTIVO_NO_ENCONTRADO";
 	public static final String SIMBOLO_DUPLICADO = "SIMBOLO_DUPLICADO";
+	public static final String SIMBOLO_BLOQUEADO = "SIMBOLO_BLOQUEADO";
 
 	private static final String RESTRICCION_SIMBOLO_UNICO = "uk_activo_simbolo";
 
@@ -35,6 +37,25 @@ public class ActivoServicio {
 		}
 		Activo activo = new Activo(solicitud.simbolo(), solicitud.nombre(), solicitud.tipoActivo(),
 				solicitud.moneda());
+		return aRespuesta(guardar(activo));
+	}
+
+	/**
+	 * Enviar el mismo símbolo que ya tiene el activo no es un cambio y no se comprueba el bloqueo.
+	 */
+	@Transactional
+	public ActivoRespuesta actualizar(Long id, ActualizarActivoSolicitud solicitud) {
+		Activo activo = buscar(id);
+		if (!solicitud.simbolo().equals(activo.getSimbolo())) {
+			if (tieneRegistrosHistoricos(id)) {
+				throw new ConflictoExcepcion(SIMBOLO_BLOQUEADO,
+						"El símbolo no se puede modificar porque el activo tiene registros históricos.", "simbolo");
+			}
+			if (activoRepositorio.existsBySimbolo(solicitud.simbolo())) {
+				throw simboloDuplicado(solicitud.simbolo());
+			}
+		}
+		activo.actualizar(solicitud.simbolo(), solicitud.nombre(), solicitud.tipoActivo(), solicitud.moneda());
 		return aRespuesta(guardar(activo));
 	}
 

@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -167,6 +168,79 @@ class ActivoControladorIntegracionTest extends PruebaIntegracion {
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.codigo").value("ACTIVO_NO_ENCONTRADO"))
 				.andExpect(jsonPath("$.ruta").value(RUTA + "/999"));
+	}
+
+	@Test
+	void actualizarModificaLosCuatroCampos() throws Exception {
+		Long id = crearYObtenerId("IVV");
+
+		actualizar(id, " vxus ", " Vanguard Total International Stock ETF ", "ACCION", "USD")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id))
+				.andExpect(jsonPath("$.simbolo").value("VXUS"))
+				.andExpect(jsonPath("$.nombre").value("Vanguard Total International Stock ETF"))
+				.andExpect(jsonPath("$.tipoActivo").value("ACCION"))
+				.andExpect(jsonPath("$.moneda").value("USD"))
+				.andExpect(jsonPath("$.simboloEditable").value(true))
+				.andExpect(jsonPath("$.fechaActualizacion").doesNotExist());
+
+		mockMvc.perform(get(RUTA + "/" + id))
+				.andExpect(jsonPath("$.simbolo").value("VXUS"))
+				.andExpect(jsonPath("$.tipoActivo").value("ACCION"));
+	}
+
+	@Test
+	void actualizarConSimboloDeOtroActivoDevuelve409() throws Exception {
+		crear("IVV", "iShares Core S&P 500 ETF", "ETF", "USD").andExpect(status().isCreated());
+		crear("VXUS", "Vanguard Total International Stock ETF", "ETF", "USD").andExpect(status().isCreated());
+		Long idVxus = activoRepositorio.findAllByOrderBySimboloAsc().get(1).getId();
+
+		actualizar(idVxus, "ivv", "Vanguard Total International Stock ETF", "ETF", "USD")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("SIMBOLO_DUPLICADO"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("simbolo"));
+	}
+
+	@Test
+	void actualizarConElMismoSimboloDevuelve200() throws Exception {
+		Long id = crearYObtenerId("IVV");
+
+		actualizar(id, "IVV", "Nombre corregido", "ETF", "USD")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simbolo").value("IVV"))
+				.andExpect(jsonPath("$.nombre").value("Nombre corregido"));
+	}
+
+	@Test
+	void actualizarInexistenteDevuelve404() throws Exception {
+		actualizar(999L, "IVV", "iShares Core S&P 500 ETF", "ETF", "USD")
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("ACTIVO_NO_ENCONTRADO"));
+	}
+
+	@Test
+	void actualizarConDatosInvalidosDevuelve400() throws Exception {
+		Long id = crearYObtenerId("IVV");
+
+		actualizar(id, "IV V", "", "ETF", "EUR")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
+
+		mockMvc.perform(put(RUTA + "/" + id).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"simbolo":"IV V","nombre":"","tipoActivo":"ETF","moneda":"USD"}
+						"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.erroresCampos[*].campo").value(hasItem("simbolo")))
+				.andExpect(jsonPath("$.erroresCampos[*].campo").value(hasItem("nombre")));
+	}
+
+	private ResultActions actualizar(Long id, String simbolo, String nombre, String tipoActivo, String moneda)
+			throws Exception {
+		String cuerpo = """
+				{"simbolo":"%s","nombre":"%s","tipoActivo":"%s","moneda":"%s"}
+				""".formatted(simbolo, nombre, tipoActivo, moneda);
+		return mockMvc.perform(put(RUTA + "/" + id).contentType(MediaType.APPLICATION_JSON).content(cuerpo));
 	}
 
 	private ResultActions crear(String simbolo, String nombre, String tipoActivo, String moneda) throws Exception {

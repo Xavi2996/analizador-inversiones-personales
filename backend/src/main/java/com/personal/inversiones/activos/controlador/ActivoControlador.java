@@ -7,11 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.personal.inversiones.activos.dto.ActivoRespuesta;
+import com.personal.inversiones.activos.dto.ActualizarActivoSolicitud;
 import com.personal.inversiones.activos.dto.CrearActivoSolicitud;
 import com.personal.inversiones.activos.servicio.ActivoServicio;
 
@@ -40,6 +42,12 @@ public class ActivoControlador {
 	@GetMapping("/{id}")
 	public ActivoRespuesta obtener(@PathVariable Long id) {
 		return activoServicio.obtener(id);
+	}
+
+	@PutMapping("/{id}")
+	public ActivoRespuesta actualizar(@PathVariable Long id,
+			@Valid @RequestBody ActualizarActivoSolicitud solicitud) {
+		return activoServicio.actualizar(id, solicitud);
 	}
 
 }
