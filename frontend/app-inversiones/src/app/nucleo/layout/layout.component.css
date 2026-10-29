@@ -1,0 +1,213 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.saltar {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 100;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--color-principal);
+  color: #fff;
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.saltar:focus {
+  top: 12px;
+}
+
+/* Marca */
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: var(--color-texto);
+  text-decoration: none;
+}
+
+.marca-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.marca-nombre {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.marca-subtitulo {
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-texto-terciario);
+}
+
+/* Enlaces de navegación (escritorio y menú móvil) */
+.enlace {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 34px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-texto-secundario);
+  text-decoration: none;
+}
+
+.enlace .icono {
+  color: var(--color-texto-terciario);
+}
+
+.enlace:hover {
+  color: var(--color-texto);
+}
+
+.enlace.activo {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.enlace.activo .icono {
+  color: var(--color-principal-destacado);
+}
+
+/* Escritorio: navegación lateral */
+.lateral {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 244px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px 22px;
+  background: var(--color-fondo-secundario);
+}
+
+.lateral .marca {
+  padding-bottom: 34px;
+}
+
+.lateral-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grupo-titulo {
+  padding-bottom: 10px;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-texto-terciario);
+}
+
+/* La barra indica la opción activa además del peso y el color del texto. */
+.lateral .enlace.activo::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-principal);
+}
+
+.columna {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Móvil: barra superior y menú desplegable */
+.superior,
+.menu-movil {
+  display: none;
+}
+
+.contenido {
+  width: 100%;
+  max-width: 1320px;
+  padding: clamp(24px, 3.4vw, 48px) clamp(16px, 3.6vw, 56px) 80px;
+  outline: none;
+}
+
+@media (max-width: 879.98px) {
+  .lateral {
+    display: none;
+  }
+
+  .superior {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 56px;
+    padding: 0 16px;
+    background: var(--color-fondo-secundario);
+  }
+
+  .marca-compacta {
+    gap: 10px;
+    min-height: 44px;
+  }
+
+  .pantalla {
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .boton-menu {
+    flex: none;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--color-borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-texto);
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .menu-movil {
+    position: sticky;
+    top: 56px;
+    z-index: 19;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 12px;
+    padding: 8px 16px 16px;
+    background: var(--color-fondo-secundario);
+    border-bottom: 1px solid var(--color-borde);
+  }
+
+  .menu-movil .enlace {
+    gap: 10px;
+    height: 44px;
+  }
+}

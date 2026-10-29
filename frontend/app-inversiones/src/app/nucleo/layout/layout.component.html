@@ -1,0 +1,107 @@
+<a href="#contenido" class="saltar" (click)="saltarAlContenido($event, contenido)">
+  Saltar al contenido principal
+</a>
+
+<ng-template #marca let-tamano="tamano">
+  <svg [attr.width]="tamano" [attr.height]="tamano" viewBox="0 0 30 30" aria-hidden="true">
+    <circle cx="15" cy="15" r="13.5" fill="none" stroke="var(--color-borde)" />
+    <path
+      d="M8 18.5 12.5 14l3.5 3 6-7"
+      fill="none"
+      stroke="var(--color-principal-destacado)"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="22" cy="10" r="1.8" fill="var(--color-principal-destacado)" />
+  </svg>
+</ng-template>
+
+<ng-template #icono let-trazo="trazo">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    class="icono"
+  >
+    <path [attr.d]="trazo" />
+  </svg>
+</ng-template>
+
+<div class="shell">
+  <aside class="lateral" aria-label="Navegación principal">
+    <a routerLink="/" class="marca">
+      <ng-container *ngTemplateOutlet="marca; context: { tamano: 30 }" />
+      <span class="marca-texto">
+        <span class="marca-nombre">Analizador</span>
+        <span class="marca-subtitulo">Inversiones personales</span>
+      </span>
+    </a>
+
+    <nav class="lateral-nav">
+      @for (grupo of grupos; track grupo.titulo) {
+        <div class="grupo">
+          <div class="grupo-titulo">{{ grupo.titulo }}</div>
+          @for (item of grupo.items; track item.ruta) {
+            <a
+              [routerLink]="item.ruta"
+              routerLinkActive="activo"
+              ariaCurrentWhenActive="page"
+              class="enlace"
+            >
+              <ng-container *ngTemplateOutlet="icono; context: { trazo: item.icono }" />
+              {{ item.etiqueta }}
+            </a>
+          }
+        </div>
+      }
+    </nav>
+  </aside>
+
+  <div class="columna">
+    <header class="superior">
+      <a routerLink="/" class="marca marca-compacta" [attr.aria-label]="'Analizador, ' + pantallaActual()">
+        <ng-container *ngTemplateOutlet="marca; context: { tamano: 26 }" />
+        <span class="pantalla">{{ pantallaActual() }}</span>
+      </a>
+      <button
+        type="button"
+        class="boton-menu"
+        aria-controls="menu-movil"
+        [attr.aria-expanded]="menuAbierto()"
+        (click)="alternarMenu()"
+      >
+        Menú
+      </button>
+    </header>
+
+    @if (menuAbierto()) {
+      <nav id="menu-movil" class="menu-movil" aria-label="Navegación principal">
+        @for (grupo of grupos; track grupo.titulo) {
+          @for (item of grupo.items; track item.ruta) {
+            <a
+              [routerLink]="item.ruta"
+              routerLinkActive="activo"
+              ariaCurrentWhenActive="page"
+              class="enlace"
+              (click)="cerrarMenu()"
+            >
+              <ng-container *ngTemplateOutlet="icono; context: { trazo: item.icono }" />
+              {{ item.etiqueta }}
+            </a>
+          }
+        }
+      </nav>
+    }
+
+    <main id="contenido" #contenido tabindex="-1" class="contenido">
+      <router-outlet />
+    </main>
+  </div>
+</div>
