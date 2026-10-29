@@ -1018,6 +1018,13 @@ Ejemplos:
 
 Utilizará principalmente el color principal.
 
+El fondo del botón primario usa una variante más oscura del azul principal:
+
+- normal: #2563EB;
+- al pasar el cursor: #1D4ED8.
+
+Motivo: el texto blanco sobre #3B82F6 no alcanza el contraste mínimo de 4.5:1; sobre #2563EB sí. Es el valor del prototipo aprobado. El resto de usos del color principal (enlaces, navegación activa, indicadores) mantienen #3B82F6 y #60A5FA.
+
 ---
 
 ## 46.2 Secundario
