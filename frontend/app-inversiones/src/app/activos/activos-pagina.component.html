@@ -1,0 +1,174 @@
+<div class="pagina">
+  <header class="encabezado">
+    <div>
+      <div class="sobretitulo">Registro</div>
+      <h1>Activos</h1>
+      <p class="descripcion">
+        Instrumentos que pueden formar parte del portafolio y el porcentaje objetivo de cada uno.
+      </p>
+    </div>
+    @if (estado() === 'listo' && activos().length > 0) {
+      <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Registrar activo
+      </button>
+    }
+  </header>
+
+  @switch (estado()) {
+    @case ('cargando') {
+      <p class="mensaje" role="status">Cargando activos…</p>
+    }
+
+    @case ('error') {
+      <div class="mensaje mensaje-error" role="alert">
+        <p>No fue posible cargar los activos. Comprueba que el servidor esté disponible e inténtalo de nuevo.</p>
+        <button type="button" class="boton boton-secundario" (click)="cargar()">Reintentar</button>
+      </div>
+    }
+
+    @case ('listo') {
+      @if (activos().length === 0) {
+        <div class="vacio">
+          <p>No existen activos registrados.</p>
+          <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+            Registrar primer activo
+          </button>
+        </div>
+      } @else {
+        @if (asignaciones(); as lista) {
+          <section class="asignacion" aria-label="Asignación objetivo">
+            <div class="asignacion-suma">
+              <div class="etiqueta">Asignación objetivo</div>
+              <div class="suma">
+                <span class="suma-valor">{{ lista.sumaPorcentajes | number: '1.2-4' }}%</span>
+                @if (lista.sumaCorrecta) {
+                  <span class="suma-estado correcta">✓ suma correcta</span>
+                } @else {
+                  <span class="suma-estado advertencia">⚠ la suma debería ser 100%</span>
+                }
+              </div>
+            </div>
+
+            <div class="asignacion-detalle">
+              <div class="barra" aria-hidden="true">
+                @for (segmento of segmentos(); track segmento.simbolo) {
+                  <span [style.flex-grow]="segmento.porcentaje" [style.background]="segmento.color"></span>
+                }
+                @if (restoSinAsignar() > 0) {
+                  <span class="sin-asignar" [style.flex-grow]="restoSinAsignar()"></span>
+                }
+              </div>
+              @if (lista.asignaciones.length > 0) {
+                <ul class="leyenda" aria-label="Objetivo por activo">
+                  @for (asignacion of lista.asignaciones; track asignacion.activoId) {
+                    <li>
+                      <span class="simbolo">{{ asignacion.simbolo }}</span>
+                      {{ asignacion.porcentajeObjetivo | number: '1.2-4' }}%
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="leyenda-vacia">Ningún activo tiene porcentaje objetivo.</p>
+              }
+            </div>
+          </section>
+        }
+
+        <section>
+          <div class="tabla-contenedor" role="region" aria-label="Activos registrados" tabindex="0">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Activo</th>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Moneda</th>
+                  <th scope="col" class="numero">Objetivo</th>
+                  <th scope="col"><span class="solo-lector">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of filas(); track fila.activo.id) {
+                  <tr>
+                    <td>
+                      <div class="activo">
+                        <span class="franja" [style.background]="fila.color"></span>
+                        <span>
+                          <span class="simbolo">{{ fila.activo.simbolo }}</span>
+                          <span class="nombre">{{ fila.activo.nombre }}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td class="secundario">{{ fila.tipo }}</td>
+                    <td class="secundario">{{ fila.activo.moneda }}</td>
+                    <td class="numero">
+                      @if (fila.objetivo !== null) {
+                        {{ fila.objetivo | number: '1.2-4' }}%
+                      } @else {
+                        <span class="sin-objetivo" title="Sin porcentaje objetivo">—</span>
+                      }
+                    </td>
+                    <td class="acciones">
+                      <button
+                        type="button"
+                        class="boton boton-texto"
+                        [attr.aria-label]="'Editar ' + fila.activo.simbolo"
+                        (click)="abrirEdicion(fila.activo)"
+                      >
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <ul class="tarjetas" aria-label="Activos registrados">
+            @for (fila of filas(); track fila.activo.id) {
+              <li>
+                <div class="activo">
+                  <span class="franja" [style.background]="fila.color"></span>
+                  <span>
+                    <span class="simbolo">{{ fila.activo.simbolo }}</span>
+                    <span class="nombre">{{ fila.activo.nombre }}</span>
+                  </span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Tipo</dt>
+                    <dd>{{ fila.tipo }}</dd>
+                  </div>
+                  <div>
+                    <dt>Moneda</dt>
+                    <dd>{{ fila.activo.moneda }}</dd>
+                  </div>
+                  <div>
+                    <dt>Objetivo</dt>
+                    <dd>
+                      @if (fila.objetivo !== null) {
+                        {{ fila.objetivo | number: '1.2-4' }}%
+                      } @else {
+                        <span class="sin-objetivo">—</span>
+                      }
+                    </dd>
+                  </div>
+                </dl>
+                <button
+                  type="button"
+                  class="boton boton-texto"
+                  [attr.aria-label]="'Editar ' + fila.activo.simbolo"
+                  (click)="abrirEdicion(fila.activo)"
+                >
+                  Editar
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  }
+</div>

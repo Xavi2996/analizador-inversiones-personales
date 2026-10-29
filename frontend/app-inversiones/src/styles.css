@@ -16,6 +16,9 @@
   /* Interacción */
   --color-principal: #3b82f6;
   --color-principal-destacado: #60a5fa;
+  /* Fondo de botones primarios: más oscuro que el principal para que el texto blanco alcance 4.5:1. */
+  --color-boton-principal: #2563eb;
+  --color-boton-principal-hover: #1d4ed8;
 
   /* Texto */
   --color-texto: #f1f5f9;
@@ -88,6 +91,62 @@ a {
   outline-offset: 2px;
 }
 
+/* Botones (guía §45 y §46): una misma acción se ve igual en todas las pantallas. */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.boton-primario {
+  background: var(--color-boton-principal);
+  color: #fff;
+}
+
+.boton-primario:hover:not(:disabled) {
+  background: var(--color-boton-principal-hover);
+}
+
+.boton-secundario {
+  border-color: var(--color-borde);
+  color: var(--color-texto);
+}
+
+.boton-secundario:hover:not(:disabled) {
+  background: var(--color-fondo-secundario);
+}
+
+/* Acción discreta dentro de tablas y listas (por ejemplo, Editar). */
+.boton-texto {
+  height: 32px;
+  padding: 0 12px;
+  color: var(--color-texto-secundario);
+  font-size: 13px;
+}
+
+.boton-texto:hover:not(:disabled) {
+  background: var(--color-tarjeta);
+  color: var(--color-texto);
+}
+
 /* Texto solo para lectores de pantalla. */
 .solo-lector {
   position: absolute;
@@ -107,5 +166,11 @@ a {
   select,
   textarea {
     font-size: 16px;
+  }
+
+  /* Área táctil mínima en móvil (guía §48). */
+  .boton,
+  .boton-texto {
+    min-height: 44px;
   }
 }
