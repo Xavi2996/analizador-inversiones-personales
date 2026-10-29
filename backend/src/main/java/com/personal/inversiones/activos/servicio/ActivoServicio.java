@@ -79,7 +79,10 @@ public class ActivoServicio {
 		return false;
 	}
 
-	private Activo buscar(Long id) {
+	/**
+	 * Lo usan también otros módulos que referencian un activo, para responder el mismo 404.
+	 */
+	public Activo buscar(Long id) {
 		return activoRepositorio.findById(id)
 				.orElseThrow(() -> new RecursoNoEncontradoExcepcion(ACTIVO_NO_ENCONTRADO,
 						"No existe el activo solicitado."));

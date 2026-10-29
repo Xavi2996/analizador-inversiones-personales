@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -29,11 +28,6 @@ class ActivoControladorIntegracionTest extends PruebaIntegracion {
 
 	@Autowired
 	private ActivoRepositorio activoRepositorio;
-
-	@BeforeEach
-	void limpiar() {
-		activoRepositorio.deleteAll();
-	}
 
 	@Test
 	void crearDevuelve201ConElActivoNormalizado() throws Exception {
