@@ -622,6 +622,11 @@ Los formularios deberán tener:
 
 Los campos deberán diferenciarse claramente del fondo general.
 
+Colores de los campos (valores del prototipo aprobado):
+
+- borde del campo: #5B6B82, porque el borde general (#2D3748) no alcanza el contraste mínimo de 3:1 que necesitan los controles;
+- texto de error bajo el campo: #FCA5A5, con el borde del campo en el rojo de estado (#EF4444) y un icono, para no depender solo del color.
+
 ---
 
 # 22. Campos obligatorios
