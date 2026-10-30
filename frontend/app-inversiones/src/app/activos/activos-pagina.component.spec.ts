@@ -118,6 +118,33 @@ describe('ActivosPaginaComponent', () => {
     expect(elemento.querySelector('.barra .sin-asignar')).not.toBeNull();
   });
 
+  it('abre el panel, guarda, muestra el aviso y recarga la tabla', async () => {
+    responder([], { asignaciones: [], sumaPorcentajes: 0, sumaCorrecta: false });
+
+    elemento.querySelector<HTMLButtonElement>('.vacio button')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(elemento.querySelector('app-activo-form h2')?.textContent).toBe('Registrar activo');
+
+    const escribir = (selector: string, valor: string) => {
+      const campo = elemento.querySelector<HTMLInputElement>(selector)!;
+      campo.value = valor;
+      campo.dispatchEvent(new Event('input'));
+    };
+    escribir('#activo-simbolo', 'IVV');
+    escribir('#activo-nombre', 'iShares Core S&P 500 ETF');
+    // Opciones: Acción, ETF, Criptomoneda.
+    elemento.querySelectorAll<HTMLInputElement>('.segmento input')[1].click();
+    elemento.querySelector('form')!.dispatchEvent(new Event('submit'));
+
+    http.expectOne('/api/v1/activos').flush(ACTIVOS[1]);
+    responder([ACTIVOS[1]], { asignaciones: [], sumaPorcentajes: 0, sumaCorrecta: false });
+
+    expect(elemento.querySelector('app-activo-form')).toBeNull();
+    expect(texto('.aviso')).toContain('Activo registrado correctamente.');
+    expect(elemento.querySelectorAll('tbody tr').length).toBe(1);
+  });
+
   it('muestra un error comprensible y permite reintentar', () => {
     http.expectOne('/api/v1/activos').flush(null, { status: 500, statusText: 'Error' });
     // Si una consulta falla, forkJoin cancela la otra.

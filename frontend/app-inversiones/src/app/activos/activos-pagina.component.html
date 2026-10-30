@@ -172,3 +172,21 @@
     }
   }
 </div>
+
+@if (panel(); as panelActual) {
+  <app-activo-form
+    [panel]="panelActual"
+    [porcentajeActual]="porcentajeDe(panelActual)"
+    (guardado)="alGuardar($event)"
+    (cerrado)="panel.set(null)"
+  />
+}
+
+<div class="aviso-region" role="status" aria-live="polite">
+  @if (aviso(); as avisoActual) {
+    <div class="aviso" [class.aviso-advertencia]="avisoActual.tipo === 'advertencia'">
+      <span class="aviso-icono" aria-hidden="true">{{ avisoActual.tipo === 'exito' ? '✓' : '⚠' }}</span>
+      {{ avisoActual.mensaje }}
+    </div>
+  }
+</div>
