@@ -1,6 +1,6 @@
 # SPEC 001 — Activos y asignación objetivo
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** ninguna
 > **Fecha:** 2026-10-26
 > **Objetivo:** Registrar, consultar y editar los activos del portafolio y su porcentaje objetivo desde una pantalla Activos dentro del shell base de la aplicación.

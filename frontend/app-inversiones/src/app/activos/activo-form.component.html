@@ -1,0 +1,148 @@
+<dialog
+  #dialogo
+  class="panel"
+  aria-labelledby="panel-titulo"
+  (cancel)="alCancelar($event)"
+  (click)="alHacerClic($event)"
+>
+  <div class="panel-contenido">
+    <header class="panel-encabezado">
+      <div>
+        <div class="sobretitulo">{{ editando ? 'Edición' : 'Nuevo activo' }}</div>
+        <h2 id="panel-titulo">{{ editando ? 'Editar ' + editando.simbolo : 'Registrar activo' }}</h2>
+      </div>
+      <button type="button" class="cerrar" aria-label="Cerrar" [disabled]="guardando()" (click)="cerrar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </button>
+    </header>
+
+    <form class="formulario" [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+      @if (errorGeneral(); as mensaje) {
+        <p class="error-general" role="alert" tabindex="-1">
+          <span class="error-general-icono" aria-hidden="true">⚠</span>{{ mensaje }}
+        </p>
+      }
+
+      <div class="campo">
+        @if (editando && !editando.simboloEditable) {
+          <span class="campo-etiqueta">Símbolo</span>
+          <div class="simbolo-fijo">
+            <span class="simbolo">{{ editando.simbolo }}</span>
+            <span class="nota">No editable</span>
+          </div>
+        } @else {
+          <label class="campo-etiqueta" for="activo-simbolo">Símbolo *</label>
+          <input
+            id="activo-simbolo"
+            class="campo-control simbolo"
+            formControlName="simbolo"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="30"
+            aria-required="true"
+            [attr.aria-invalid]="error('simbolo') ? true : null"
+            [attr.aria-describedby]="error('simbolo') ? 'activo-simbolo-error' : null"
+          />
+          @if (error('simbolo'); as mensaje) {
+            <p id="activo-simbolo-error" class="campo-error">
+              <span aria-hidden="true">⚠</span>{{ mensaje }}
+            </p>
+          }
+        }
+      </div>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="activo-nombre">Nombre *</label>
+        <input
+          id="activo-nombre"
+          class="campo-control"
+          formControlName="nombre"
+          placeholder="Nombre del instrumento"
+          autocomplete="off"
+          aria-required="true"
+          [attr.aria-invalid]="error('nombre') ? true : null"
+          [attr.aria-describedby]="error('nombre') ? 'activo-nombre-error' : null"
+        />
+        @if (error('nombre'); as mensaje) {
+          <p id="activo-nombre-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <fieldset
+        class="campo"
+        [attr.aria-invalid]="error('tipoActivo') ? true : null"
+        [attr.aria-describedby]="error('tipoActivo') ? 'activo-tipo-error' : null"
+      >
+        <legend class="campo-etiqueta">Tipo de activo *</legend>
+        <div class="segmentos">
+          @for (tipo of tipos; track tipo.valor) {
+            <label class="segmento">
+              <input type="radio" formControlName="tipoActivo" [value]="tipo.valor" />
+              <span>{{ tipo.etiqueta }}</span>
+            </label>
+          }
+        </div>
+        @if (error('tipoActivo'); as mensaje) {
+          <p id="activo-tipo-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </fieldset>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="activo-moneda">Moneda *</label>
+        <select
+          id="activo-moneda"
+          class="campo-control"
+          formControlName="moneda"
+          aria-required="true"
+          [attr.aria-invalid]="error('moneda') ? true : null"
+        >
+          @for (moneda of monedas; track moneda) {
+            <option [value]="moneda">{{ moneda }}</option>
+          }
+        </select>
+        @if (error('moneda'); as mensaje) {
+          <p class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo objetivo">
+        <label class="campo-etiqueta" for="activo-objetivo">
+          Porcentaje objetivo <span class="opcional">· opcional</span>
+        </label>
+        <div class="con-sufijo">
+          <input
+            id="activo-objetivo"
+            class="campo-control"
+            formControlName="porcentajeObjetivo"
+            inputmode="decimal"
+            placeholder="0.00"
+            autocomplete="off"
+            [attr.aria-invalid]="error('porcentajeObjetivo') ? true : null"
+            [attr.aria-describedby]="
+              error('porcentajeObjetivo') ? 'activo-objetivo-error activo-objetivo-ayuda' : 'activo-objetivo-ayuda'
+            "
+          />
+          <span class="sufijo" aria-hidden="true">%</span>
+        </div>
+        @if (error('porcentajeObjetivo'); as mensaje) {
+          <p id="activo-objetivo-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+        <p id="activo-objetivo-ayuda" class="campo-ayuda">
+          Se guarda como asignación objetivo, entre 0 y 100. Puede cambiar después sin alterar operaciones
+          históricas.
+        </p>
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton boton-primario" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar activo' }}
+        </button>
+        <button type="button" class="boton boton-texto cancelar" [disabled]="guardando()" (click)="cerrar()">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

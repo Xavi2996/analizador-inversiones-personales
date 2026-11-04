@@ -199,11 +199,13 @@ Referencia inicial:
 
 ## 4.10 Texto menos relevante
 
-Referencia inicial:
+Valor aprobado:
 
-#64748B
+#7C8AA0
 
 Se utilizará únicamente para información secundaria.
+
+La referencia inicial era #64748B. Se reemplazó por el valor del prototipo aprobado porque sobre el fondo principal (#0B1120) #64748B no alcanza el contraste mínimo de 4.5:1 para texto pequeño, y #7C8AA0 sí lo supera.
 
 ---
 
@@ -620,6 +622,11 @@ Los formularios deberán tener:
 
 Los campos deberán diferenciarse claramente del fondo general.
 
+Colores de los campos (valores del prototipo aprobado):
+
+- borde del campo: #5B6B82, porque el borde general (#2D3748) no alcanza el contraste mínimo de 3:1 que necesitan los controles;
+- texto de error bajo el campo: #FCA5A5, con el borde del campo en el rojo de estado (#EF4444) y un icono, para no depender solo del color.
+
 ---
 
 # 22. Campos obligatorios
@@ -1015,6 +1022,13 @@ Ejemplos:
 - Registrar transacción
 
 Utilizará principalmente el color principal.
+
+El fondo del botón primario usa una variante más oscura del azul principal:
+
+- normal: #2563EB;
+- al pasar el cursor: #1D4ED8.
+
+Motivo: el texto blanco sobre #3B82F6 no alcanza el contraste mínimo de 4.5:1; sobre #2563EB sí. Es el valor del prototipo aprobado. El resto de usos del color principal (enlaces, navegación activa, indicadores) mantienen #3B82F6 y #60A5FA.
 
 ---
 
