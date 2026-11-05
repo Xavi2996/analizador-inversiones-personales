@@ -113,14 +113,17 @@ Un aporte contiene:
 
 ## 3.3 Reglas
 
+- La fecha del aporte no puede ser posterior a la fecha actual de negocio (ver sección 17).
 - El monto aportado debe ser mayor que cero.
 - El monto neto recibido no puede ser negativo.
-- El costo de fondeo no puede ser negativo.
-- El monto neto recibido no debe superar el monto aportado salvo que exista una razón explícita.
-- El costo de fondeo puede calcularse como:
+- El monto neto recibido no puede superar el monto aportado. Puede ser igual (costo de fondeo cero).
+- El costo de fondeo no se ingresa: el sistema lo calcula como:
 
 monto aportado - monto neto recibido
 
+- Por las reglas anteriores, el costo de fondeo nunca es negativo.
+- El método de fondeo y el comentario son opcionales y de texto libre.
+- En el MVP un aporte no se edita ni se elimina. La corrección de movimientos históricos se definirá en su propia especificación.
 - Un aporte aumenta el total aportado desde bolsillo.
 - Un aporte aumenta el dinero disponible en el intermediario únicamente por el monto neto recibido.
 
@@ -689,3 +692,4 @@ No se debe sobrescribir información histórica cuando represente un evento dist
 8. Las fotografías conservan el estado histórico.
 9. El backend será la fuente oficial para cálculos financieros.
 10. Las reglas se validarán utilizando el Excel de referencia.
+11. La fecha actual de negocio ("hoy") es la fecha en la zona horaria `America/Guayaquil`, no la del servidor. Las validaciones que dependen de "hoy" usan esa fecha.

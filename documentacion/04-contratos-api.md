@@ -232,11 +232,11 @@ POST /api/v1/aportes
 Solicitud:
 
 {
-"fechaAporte": "2026-10-22",
+"fechaAporte": "2026-10-21",
 "montoAportado": 200.00,
 "montoNetoBroker": 195.58,
-"metodoFondeo": "BINANCE",
-"comentario": "Aporte mensual"
+"metodoFondeo": "Binance USDT → ERC20 → Hapi",
+"comentario": "Tercer aporte"
 }
 
 El backend calculará:
@@ -244,23 +244,66 @@ El backend calculará:
 costoFondeo =
 montoAportado - montoNetoBroker
 
-Respuesta 201:
+porcentajeCostoFondeo =
+costoFondeo / montoAportado × 100
+
+Respuesta 201 (`AporteRespuesta`):
 
 {
-"id": 1,
-"fechaAporte": "2026-10-22",
+"id": 3,
+"fechaAporte": "2026-10-21",
 "montoAportado": 200.00,
 "montoNetoBroker": 195.58,
 "costoFondeo": 4.42,
-"metodoFondeo": "BINANCE",
-"comentario": "Aporte mensual"
+"porcentajeCostoFondeo": 2.21,
+"metodoFondeo": "Binance USDT → ERC20 → Hapi",
+"comentario": "Tercer aporte"
 }
+
+Reglas:
+
+- `fechaAporte` es obligatoria y no puede ser posterior a la fecha actual de negocio en `America/Guayaquil`.
+- `montoAportado` es obligatorio, mayor que cero y admite como máximo 2 decimales.
+- `montoNetoBroker` es obligatorio, mayor o igual que cero, admite como máximo 2 decimales y no puede superar `montoAportado`.
+- `costoFondeo` no se acepta en la solicitud; si llega, se ignora.
+- `metodoFondeo` es texto libre opcional de hasta 50 caracteres.
+- `comentario` es opcional y admite hasta 500 caracteres.
+- Los textos se recortan; vacíos se devuelven como `null`.
+- Los montos se devuelven con 2 decimales.
+- Los porcentajes se devuelven con 2 decimales, redondeados con `HALF_UP`.
+- Las fechas técnicas no se exponen.
+
+Errores:
+
+- 400 `DATOS_INVALIDOS`, con `erroresCampos`. Incluye el neto mayor que el aportado (campo `montoNetoBroker`) y la fecha futura (campo `fechaAporte`).
+
+No existen `PUT /api/v1/aportes/{id}` ni `DELETE /api/v1/aportes/{id}`.
 
 ---
 
 ## 9.2 Listar aportes
 
 GET /api/v1/aportes
+
+Respuesta 200 (`ListaAportesRespuesta`):
+
+{
+"aportes": [ AporteRespuesta, ... ],
+"totalAportado": 575.00,
+"totalNetoBroker": 559.13,
+"totalCostoFondeo": 15.87,
+"porcentajeCostoFondeo": 2.76,
+"porcentajeNetoBroker": 97.24
+}
+
+Reglas:
+
+- `aportes` se ordena por `fechaAporte` descendente y, a igual fecha, por `id` descendente.
+- `porcentajeCostoFondeo` = `totalCostoFondeo / totalAportado × 100`.
+- `porcentajeNetoBroker` = `totalNetoBroker / totalAportado × 100`.
+- Sin aportes, `aportes` es `[]` y todos los totales y porcentajes valen 0.
+
+El cálculo de los totales pertenece al backend.
 
 Filtros futuros:
 
@@ -272,6 +315,12 @@ Filtros futuros:
 ## 9.3 Obtener aporte
 
 GET /api/v1/aportes/{id}
+
+Respuesta 200 con la misma estructura de 9.1.
+
+Errores:
+
+- 404 `APORTE_NO_ENCONTRADO`
 
 ---
 
@@ -723,6 +772,8 @@ DATOS_INVALIDOS
 ERROR_INTERNO
 
 SOLICITUD_INVALIDA: errores de la solicitud ajenos a los datos (ruta inexistente, método no permitido, tipo de contenido no soportado). Conserva el estado HTTP real (404, 405, 415…).
+
+APORTE_NO_ENCONTRADO
 
 APORTE_INVALIDO
 

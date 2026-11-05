@@ -682,6 +682,20 @@ Ejemplos:
 
 Las fechas técnicas utilizarán tipos adecuados de fecha y hora.
 
+## 30.1 Zona horaria de negocio
+
+La fecha actual de negocio ("hoy") se calcula en una zona horaria de negocio configurable:
+
+app.zona-horaria-negocio=America/Guayaquil
+
+No depende de la zona horaria del servidor.
+
+El backend expone un bean `Clock` con esa zona (`compartido/tiempo/ConfiguracionReloj`).
+
+Los servicios obtienen la fecha de hoy con `LocalDate.now(clock)` usando el `Clock` inyectado. No se llama a `LocalDate.now()` sin reloj.
+
+Así las pruebas pueden fijar el reloj y las validaciones de fecha son deterministas.
+
 ---
 
 # 31. Validaciones
