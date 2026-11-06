@@ -2,7 +2,10 @@ package com.personal.inversiones.aportes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.jayway.jsonpath.JsonPath;
 import com.personal.inversiones.aportes.modelo.Aporte;
 import com.personal.inversiones.aportes.repositorio.AporteRepositorio;
 import com.personal.inversiones.compartido.PruebaIntegracion;
@@ -211,6 +215,89 @@ class AporteControladorIntegracionTest extends PruebaIntegracion {
 				.andExpect(jsonPath("$.costoFondeo").value(4.78));
 
 		assertThat(aporteRepositorio.findAll().getFirst().getCostoFondeo()).isEqualByComparingTo("4.78");
+	}
+
+	@Test
+	void listarOrdenaPorFechaEIdDescendentesYCalculaTotales() throws Exception {
+		Long primero = idRegistrado(aporte("2026-10-13", "125.00", "120.22"));
+		Long tercero = idRegistrado(aporte("2026-10-21", "200.00", "195.58"));
+		Long segundo = idRegistrado(aporte("2026-10-19", "250.00", "243.33"));
+		// Misma fecha que el tercero, registrado después: aparece antes por id descendente.
+		Long mismaFecha = idRegistrado(aporte("2026-10-21", "10.00", "10.00"));
+
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.aportes.length()").value(4))
+				.andExpect(jsonPath("$.aportes[0].id").value(mismaFecha))
+				.andExpect(jsonPath("$.aportes[1].id").value(tercero))
+				.andExpect(jsonPath("$.aportes[2].id").value(segundo))
+				.andExpect(jsonPath("$.aportes[3].id").value(primero))
+				.andExpect(jsonPath("$.aportes[3].costoFondeo").value(4.78))
+				.andExpect(jsonPath("$.aportes[3].porcentajeCostoFondeo").value(3.82))
+				.andExpect(jsonPath("$.totalAportado").value(585.0))
+				.andExpect(jsonPath("$.totalNetoBroker").value(569.13))
+				.andExpect(jsonPath("$.totalCostoFondeo").value(15.87))
+				// 15.87 / 585 × 100 = 2.7128 → 2.71; 569.13 / 585 × 100 = 97.2872 → 97.29
+				.andExpect(jsonPath("$.porcentajeCostoFondeo").value(2.71))
+				.andExpect(jsonPath("$.porcentajeNetoBroker").value(97.29));
+	}
+
+	@Test
+	void listarSinAportesDevuelveListaVaciaYCeros() throws Exception {
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.aportes.length()").value(0))
+				.andExpect(jsonPath("$.totalAportado").value(0.0))
+				.andExpect(jsonPath("$.totalNetoBroker").value(0.0))
+				.andExpect(jsonPath("$.totalCostoFondeo").value(0.0))
+				.andExpect(jsonPath("$.porcentajeCostoFondeo").value(0.0))
+				.andExpect(jsonPath("$.porcentajeNetoBroker").value(0.0));
+	}
+
+	@Test
+	void obtenerDevuelveElAporte() throws Exception {
+		Long id = idRegistrado(aporteConTextos("Binance", "Primer aporte"));
+
+		mockMvc.perform(get(RUTA + "/" + id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id))
+				.andExpect(jsonPath("$.fechaAporte").value("2026-10-21"))
+				.andExpect(jsonPath("$.montoAportado").value(100.0))
+				.andExpect(jsonPath("$.montoNetoBroker").value(98.0))
+				.andExpect(jsonPath("$.costoFondeo").value(2.0))
+				.andExpect(jsonPath("$.porcentajeCostoFondeo").value(2.0))
+				.andExpect(jsonPath("$.metodoFondeo").value("Binance"))
+				.andExpect(jsonPath("$.comentario").value("Primer aporte"))
+				.andExpect(jsonPath("$.fechaCreacion").doesNotExist());
+	}
+
+	@Test
+	void obtenerInexistenteDevuelve404() throws Exception {
+		mockMvc.perform(get(RUTA + "/999"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("APORTE_NO_ENCONTRADO"))
+				.andExpect(jsonPath("$.ruta").value(RUTA + "/999"));
+	}
+
+	@Test
+	void editarOEliminarNoEstanPermitidos() throws Exception {
+		Long id = idRegistrado(aporte("2026-10-21", "100.00", "98.00"));
+
+		mockMvc.perform(put(RUTA + "/" + id).contentType(MediaType.APPLICATION_JSON)
+				.content(aporte("2026-10-21", "100.00", "99.00")))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+		mockMvc.perform(delete(RUTA + "/" + id))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+
+		assertThat(aporteRepositorio.count()).isEqualTo(1);
+	}
+
+	private Long idRegistrado(String json) throws Exception {
+		String cuerpo = registrar(json).andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		return Long.valueOf(JsonPath.read(cuerpo, "$.id").toString());
 	}
 
 	private ResultActions registrar(String json) throws Exception {

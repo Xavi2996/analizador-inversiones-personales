@@ -2,6 +2,8 @@ package com.personal.inversiones.aportes.controlador;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.personal.inversiones.aportes.dto.AporteRespuesta;
 import com.personal.inversiones.aportes.dto.CrearAporteSolicitud;
+import com.personal.inversiones.aportes.dto.ListaAportesRespuesta;
 import com.personal.inversiones.aportes.servicio.AporteServicio;
 
 import jakarta.validation.Valid;
@@ -29,6 +32,16 @@ public class AporteControlador {
 	@PostMapping
 	public ResponseEntity<AporteRespuesta> registrar(@Valid @RequestBody CrearAporteSolicitud solicitud) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(aporteServicio.registrar(solicitud));
+	}
+
+	@GetMapping
+	public ListaAportesRespuesta listar() {
+		return aporteServicio.listar();
+	}
+
+	@GetMapping("/{id}")
+	public AporteRespuesta obtener(@PathVariable Long id) {
+		return aporteServicio.obtener(id);
 	}
 
 }

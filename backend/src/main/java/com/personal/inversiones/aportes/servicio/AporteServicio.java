@@ -6,19 +6,24 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.personal.inversiones.aportes.dto.AporteRespuesta;
 import com.personal.inversiones.aportes.dto.CrearAporteSolicitud;
+import com.personal.inversiones.aportes.dto.ListaAportesRespuesta;
 import com.personal.inversiones.aportes.modelo.Aporte;
 import com.personal.inversiones.aportes.repositorio.AporteRepositorio;
 import com.personal.inversiones.compartido.error.DatosInvalidosExcepcion;
 import com.personal.inversiones.compartido.error.ErrorCampo;
+import com.personal.inversiones.compartido.error.RecursoNoEncontradoExcepcion;
 
 @Service
 public class AporteServicio {
+
+	public static final String APORTE_NO_ENCONTRADO = "APORTE_NO_ENCONTRADO";
 
 	/** Montos en USD: se devuelven con 2 decimales. */
 	private static final int ESCALA_MONTO = 2;
@@ -40,6 +45,37 @@ public class AporteServicio {
 		Aporte aporte = new Aporte(solicitud.fechaAporte(), solicitud.montoAportado(), solicitud.montoNetoBroker(),
 				costoFondeo, solicitud.metodoFondeo(), solicitud.comentario());
 		return aRespuesta(aporteRepositorio.save(aporte));
+	}
+
+	/**
+	 * Aportes por fecha descendente y, a igual fecha, por id descendente. Los totales y porcentajes
+	 * se calculan sobre los valores sin redondear.
+	 */
+	@Transactional(readOnly = true)
+	public ListaAportesRespuesta listar() {
+		List<Aporte> aportes = aporteRepositorio.findAllByOrderByFechaAporteDescIdDesc();
+		BigDecimal totalAportado = sumar(aportes, Aporte::getMontoAportado);
+		BigDecimal totalNetoBroker = sumar(aportes, Aporte::getMontoNetoBroker);
+		BigDecimal totalCostoFondeo = sumar(aportes, Aporte::getCostoFondeo);
+		return new ListaAportesRespuesta(
+				aportes.stream().map(this::aRespuesta).toList(),
+				monto(totalAportado),
+				monto(totalNetoBroker),
+				monto(totalCostoFondeo),
+				porcentaje(totalCostoFondeo, totalAportado),
+				porcentaje(totalNetoBroker, totalAportado));
+	}
+
+	@Transactional(readOnly = true)
+	public AporteRespuesta obtener(Long id) {
+		return aporteRepositorio.findById(id)
+				.map(this::aRespuesta)
+				.orElseThrow(() -> new RecursoNoEncontradoExcepcion(APORTE_NO_ENCONTRADO,
+						"No existe el aporte solicitado."));
+	}
+
+	private static BigDecimal sumar(List<Aporte> aportes, Function<Aporte, BigDecimal> valor) {
+		return aportes.stream().map(valor).reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 	/**
