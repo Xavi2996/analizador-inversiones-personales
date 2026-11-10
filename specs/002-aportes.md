@@ -1,6 +1,6 @@
 # SPEC 002 — Aportes
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 001
 > **Fecha:** 2026-11-04
 > **Objetivo:** Registrar y consultar los aportes de dinero al intermediario, con el costo de fondeo y los totales calculados por el backend, desde una pantalla Aportes.
