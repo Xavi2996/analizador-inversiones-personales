@@ -1,9 +1,13 @@
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { AporteFormComponent } from './aporte-form.component';
 import { Aporte, ListaAportes } from './aporte.model';
 import { AporteService } from './aporte.service';
 
 type EstadoCarga = 'cargando' | 'listo' | 'error';
+
+/** Tiempo que el aviso permanece visible (guía §39: desaparece sin bloquear). */
+const DURACION_AVISO_MS = 4000;
 
 /**
  * Pantalla Aportes: totales, barra neto/costo e historial.
@@ -11,7 +15,7 @@ type EstadoCarga = 'cargando' | 'listo' | 'error';
  */
 @Component({
   selector: 'app-aportes-pagina',
-  imports: [CurrencyPipe, DecimalPipe],
+  imports: [CurrencyPipe, DecimalPipe, AporteFormComponent],
   templateUrl: './aportes-pagina.component.html',
   styleUrl: './aportes-pagina.component.css',
 })
@@ -20,8 +24,14 @@ export class AportesPaginaComponent implements OnInit {
 
   protected readonly estado = signal<EstadoCarga>('cargando');
   protected readonly lista = signal<ListaAportes | null>(null);
-  /** El formulario de registro se incorpora en el paso 7 de la spec. */
   protected readonly formularioAbierto = signal(false);
+  protected readonly aviso = signal<string | null>(null);
+
+  private temporizadorAviso?: ReturnType<typeof setTimeout>;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.temporizadorAviso));
+  }
 
   ngOnInit(): void {
     this.cargar();
@@ -43,6 +53,15 @@ export class AportesPaginaComponent implements OnInit {
 
   protected abrirRegistro(): void {
     this.formularioAbierto.set(true);
+  }
+
+  /** Cierra el panel, confirma el registro y recarga historial y totales sin recargar la página. */
+  protected alGuardar(): void {
+    this.formularioAbierto.set(false);
+    clearTimeout(this.temporizadorAviso);
+    this.aviso.set('Aporte registrado correctamente.');
+    this.temporizadorAviso = setTimeout(() => this.aviso.set(null), DURACION_AVISO_MS);
+    this.cargar(true);
   }
 
   /** Línea de la lista móvil: método y comentario presentes, separados por " · ". */

@@ -170,3 +170,16 @@
     }
   }
 </div>
+
+@if (formularioAbierto()) {
+  <app-aporte-form (guardado)="alGuardar()" (cerrado)="formularioAbierto.set(false)" />
+}
+
+<div class="aviso-region" role="status" aria-live="polite">
+  @if (aviso(); as mensaje) {
+    <div class="aviso">
+      <span class="aviso-icono" aria-hidden="true">✓</span>
+      {{ mensaje }}
+    </div>
+  }
+</div>

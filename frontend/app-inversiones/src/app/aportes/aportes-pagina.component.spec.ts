@@ -183,4 +183,54 @@ describe('AportesPaginaComponent', () => {
 
     expect(texto('.encabezado button')).toBe('Registrar aporte');
   });
+
+  it('abre el formulario desde el estado vacío', () => {
+    responder(LISTA_VACIA);
+    expect(elemento.querySelector('app-aporte-form')).toBeNull();
+
+    elemento.querySelector<HTMLButtonElement>('.vacio button')!.click();
+    fixture.detectChanges();
+
+    expect(elemento.querySelector('app-aporte-form')).not.toBeNull();
+  });
+
+  it('al registrar confirma, cierra el formulario y recarga historial y totales', () => {
+    responder(LISTA_VACIA);
+    elemento.querySelector<HTMLButtonElement>('.vacio button')!.click();
+    fixture.detectChanges();
+
+    const escribir = (id: string, valor: string) => {
+      const campo = elemento.querySelector<HTMLInputElement>(`#${id}`)!;
+      campo.value = valor;
+      campo.dispatchEvent(new Event('input'));
+    };
+    escribir('aporte-fecha', '2026-10-21');
+    escribir('aporte-monto', '200.00');
+    escribir('aporte-neto', '195.58');
+    elemento.querySelector<HTMLFormElement>('app-aporte-form form')!.dispatchEvent(new Event('submit'));
+    http.expectOne({ method: 'POST', url: '/api/v1/aportes' }).flush(LISTA_EXCEL.aportes[0], {
+      status: 201,
+      statusText: 'Created',
+    });
+    fixture.detectChanges();
+
+    expect(texto('.aviso')).toBe('✓ Aporte registrado correctamente.');
+    expect(elemento.querySelector('app-aporte-form')).toBeNull();
+    // Recarga silenciosa: no vuelve al estado de carga.
+    expect(elemento.querySelector('p[role="status"]')).toBeNull();
+
+    http.expectOne({ method: 'GET', url: '/api/v1/aportes' }).flush({
+      ...LISTA_EXCEL,
+      aportes: [LISTA_EXCEL.aportes[0]],
+      totalAportado: 200,
+      totalNetoBroker: 195.58,
+      totalCostoFondeo: 4.42,
+      porcentajeCostoFondeo: 2.21,
+      porcentajeNetoBroker: 97.79,
+    });
+    fixture.detectChanges();
+
+    expect(elemento.querySelectorAll('tbody tr').length).toBe(1);
+    expect(texto('.cifra-principal')).toBe('$200.00');
+  });
 });

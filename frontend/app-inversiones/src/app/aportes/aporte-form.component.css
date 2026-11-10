@@ -1,0 +1,87 @@
+/* El panel, el formulario y las acciones usan los estilos compartidos de styles.css. */
+.sobretitulo {
+  font-size: 13px;
+  color: var(--color-texto-terciario);
+}
+
+h2 {
+  margin: 6px 0 0;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.subtitulo {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-texto-secundario);
+}
+
+.fecha {
+  max-width: 200px;
+  color-scheme: dark;
+}
+
+.con-prefijo {
+  position: relative;
+}
+
+.con-prefijo .campo-control {
+  padding-left: 26px;
+}
+
+.prefijo {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--color-texto-terciario);
+  pointer-events: none;
+}
+
+.comentario {
+  height: auto;
+  min-height: 72px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Valor calculado: no es un campo, solo informa (guía: valores calculados). */
+.calculado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--color-tarjeta);
+}
+
+.calculado-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.calculado-titulo {
+  font-weight: 500;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.calculado-nota {
+  font-size: 12px;
+  color: var(--color-texto-terciario);
+}
+
+.calculado-valor {
+  flex: none;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
