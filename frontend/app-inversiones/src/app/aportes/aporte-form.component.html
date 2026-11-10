@@ -1,0 +1,154 @@
+<dialog
+  #dialogo
+  class="panel"
+  aria-labelledby="aporte-titulo"
+  (cancel)="alCancelar($event)"
+  (click)="alHacerClic($event)"
+>
+  <div class="panel-contenido">
+    <header class="panel-encabezado">
+      <div>
+        <div class="sobretitulo">Nuevo aporte</div>
+        <h2 id="aporte-titulo">Registrar aporte</h2>
+        <p class="subtitulo">Ingresa los dos montos; el costo se calcula.</p>
+      </div>
+      <button type="button" class="cerrar" aria-label="Cerrar" [disabled]="guardando()" (click)="cerrar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </button>
+    </header>
+
+    <form class="formulario" [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+      @if (errorGeneral(); as mensaje) {
+        <p class="error-general" role="alert" tabindex="-1">
+          <span class="error-general-icono" aria-hidden="true">⚠</span>{{ mensaje }}
+        </p>
+      }
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="aporte-fecha">Fecha *</label>
+        <input
+          id="aporte-fecha"
+          type="date"
+          class="campo-control fecha"
+          formControlName="fechaAporte"
+          aria-required="true"
+          [attr.aria-invalid]="error('fechaAporte') ? true : null"
+          [attr.aria-describedby]="error('fechaAporte') ? 'aporte-fecha-error' : null"
+        />
+        @if (error('fechaAporte'); as mensaje) {
+          <p id="aporte-fecha-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="aporte-monto">
+          Monto aportado (USD) * <span class="opcional">· lo que salió de tu bolsillo</span>
+        </label>
+        <div class="con-prefijo">
+          <span class="prefijo" aria-hidden="true">$</span>
+          <input
+            id="aporte-monto"
+            class="campo-control"
+            formControlName="montoAportado"
+            inputmode="decimal"
+            placeholder="0.00"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-invalid]="error('montoAportado') ? true : null"
+            [attr.aria-describedby]="error('montoAportado') ? 'aporte-monto-error' : null"
+          />
+        </div>
+        @if (error('montoAportado'); as mensaje) {
+          <p id="aporte-monto-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="aporte-neto">Monto neto recibido (USD) *</label>
+        <div class="con-prefijo">
+          <span class="prefijo" aria-hidden="true">$</span>
+          <input
+            id="aporte-neto"
+            class="campo-control"
+            formControlName="montoNetoBroker"
+            inputmode="decimal"
+            placeholder="0.00"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-invalid]="error('montoNetoBroker') ? true : null"
+            [attr.aria-describedby]="
+              error('montoNetoBroker') ? 'aporte-neto-error aporte-neto-ayuda' : 'aporte-neto-ayuda'
+            "
+          />
+        </div>
+        @if (error('montoNetoBroker'); as mensaje) {
+          <p id="aporte-neto-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+        <p id="aporte-neto-ayuda" class="campo-ayuda">
+          Lo que realmente llegó al intermediario después de los costos. Revísalo en el comprobante.
+        </p>
+      </div>
+
+      <div class="calculado">
+        <div class="calculado-detalle">
+          <span class="calculado-titulo">Costo de fondeo</span>
+          <span class="calculado-nota">
+            Calculado
+            @if (costoPrevio(); as previo) {
+              · {{ previo.aportado | currency: 'USD' }} − {{ previo.neto | currency: 'USD' }}
+            }
+          </span>
+        </div>
+        <div class="calculado-valor">
+          {{ costoPrevio() ? (costoPrevio()!.costo | currency: 'USD') : '—' }}
+        </div>
+      </div>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="aporte-metodo">
+          Método de fondeo <span class="opcional">· opcional</span>
+        </label>
+        <input
+          id="aporte-metodo"
+          class="campo-control"
+          formControlName="metodoFondeo"
+          placeholder="Por ejemplo, Binance USDT → ERC20 → Hapi"
+          autocomplete="off"
+          [attr.aria-invalid]="error('metodoFondeo') ? true : null"
+          [attr.aria-describedby]="error('metodoFondeo') ? 'aporte-metodo-error' : null"
+        />
+        @if (error('metodoFondeo'); as mensaje) {
+          <p id="aporte-metodo-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="aporte-comentario">
+          Comentario <span class="opcional">· opcional</span>
+        </label>
+        <textarea
+          id="aporte-comentario"
+          class="campo-control comentario"
+          formControlName="comentario"
+          rows="3"
+          [attr.aria-invalid]="error('comentario') ? true : null"
+          [attr.aria-describedby]="error('comentario') ? 'aporte-comentario-error' : null"
+        ></textarea>
+        @if (error('comentario'); as mensaje) {
+          <p id="aporte-comentario-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton boton-primario" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Registrar aporte' }}
+        </button>
+        <button type="button" class="boton boton-texto cancelar" [disabled]="guardando()" (click)="cerrar()">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

@@ -67,6 +67,13 @@ public class ManejadorGlobalErrores {
 		return responder(HttpStatus.BAD_REQUEST, DATOS_INVALIDOS, MENSAJE_DATOS_INVALIDOS, solicitud, errores);
 	}
 
+	@ExceptionHandler(DatosInvalidosExcepcion.class)
+	public ResponseEntity<ErrorRespuesta> manejarDatosInvalidos(DatosInvalidosExcepcion ex,
+			HttpServletRequest solicitud) {
+		return responder(HttpStatus.BAD_REQUEST, DATOS_INVALIDOS, MENSAJE_DATOS_INVALIDOS, solicitud,
+				ex.getErroresCampos());
+	}
+
 	@ExceptionHandler(RecursoNoEncontradoExcepcion.class)
 	public ResponseEntity<ErrorRespuesta> manejarNoEncontrado(RecursoNoEncontradoExcepcion ex,
 			HttpServletRequest solicitud) {

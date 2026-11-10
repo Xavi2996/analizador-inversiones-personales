@@ -208,7 +208,7 @@ aporte
 
 ## Campos
 
-- id BIGINT
+- id BIGINT GENERATED ALWAYS AS IDENTITY
 - fecha_aporte DATE NOT NULL
 - monto_aportado NUMERIC(19,6) NOT NULL
 - monto_neto_broker NUMERIC(19,6) NOT NULL
@@ -218,16 +218,21 @@ aporte
 - fecha_creacion TIMESTAMPTZ NOT NULL
 - fecha_actualizacion TIMESTAMPTZ NOT NULL
 
+## Restricciones
+
+- PRIMARY KEY(id)
+- ck_aporte_monto_aportado: monto_aportado > 0
+- ck_aporte_monto_neto: monto_neto_broker >= 0 AND monto_neto_broker <= monto_aportado
+- ck_aporte_costo_fondeo: costo_fondeo = monto_aportado - monto_neto_broker
+
+Las dos últimas restricciones implican costo_fondeo >= 0.
+
 ## Reglas
 
-- monto_aportado > 0
-- monto_neto_broker >= 0
-- costo_fondeo >= 0
-
-Cálculo esperado:
-
-costo_fondeo =
-monto_aportado - monto_neto_broker
+- `costo_fondeo` lo calcula el backend y se guarda para conservar el hecho histórico.
+- `metodo_fondeo` es texto libre opcional (por ejemplo, `Binance USDT → ERC20 → Hapi`). No es un catálogo.
+- `comentario` es opcional. La aplicación limita su longitud a 500 caracteres.
+- Los textos opcionales vacíos se guardan como NULL.
 
 ---
 

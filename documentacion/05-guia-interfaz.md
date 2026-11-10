@@ -1660,6 +1660,15 @@ Al editar un activo, el prototipo muestra el símbolo siempre como
 "No editable". En la aplicación el símbolo es editable mientras el
 activo no tenga registros históricos (`simboloEditable` = `true`).
 
+En el formulario de aportes, el prototipo muestra el método como un
+selector obligatorio (Binance / Transferencia bancaria). En la
+aplicación el método es un campo de texto libre y opcional de hasta 50
+caracteres, para conservar rutas como `Binance USDT → ERC20 → Hapi`
+del Excel de referencia.
+
+Los datos de aportes del prototipo son simulados. Los valores de
+referencia son los de la hoja Aportes del Excel.
+
 ### Regla para implementación
 
 El prototipo es una referencia visual aprobada, no una restricción absoluta.
