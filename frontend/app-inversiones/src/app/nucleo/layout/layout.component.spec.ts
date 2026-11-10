@@ -10,7 +10,12 @@ describe('LayoutComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LayoutComponent],
-      providers: [provideRouter([{ path: 'activos', component: PantallaPrueba }])],
+      providers: [
+        provideRouter([
+          { path: 'activos', component: PantallaPrueba },
+          { path: 'aportes', component: PantallaPrueba },
+        ]),
+      ],
     }).compileComponents();
   });
 
@@ -22,12 +27,14 @@ describe('LayoutComponent', () => {
     return { fixture, elemento: fixture.nativeElement as HTMLElement };
   }
 
-  it('muestra solo la entrada Activos en la navegación lateral', async () => {
+  it('muestra las entradas Activos y Aportes en la navegación lateral', async () => {
     const { elemento } = await crear();
     const enlaces = elemento.querySelectorAll('.lateral-nav a');
-    expect(enlaces.length).toBe(1);
+    expect(enlaces.length).toBe(2);
     expect(enlaces[0].textContent?.trim()).toBe('Activos');
     expect(enlaces[0].getAttribute('href')).toBe('/activos');
+    expect(enlaces[1].textContent?.trim()).toBe('Aportes');
+    expect(enlaces[1].getAttribute('href')).toBe('/aportes');
   });
 
   it('marca como actual la pantalla activa', async () => {

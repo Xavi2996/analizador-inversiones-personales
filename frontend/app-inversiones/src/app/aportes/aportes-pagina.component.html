@@ -1,0 +1,172 @@
+<div class="pagina">
+  <header class="encabezado">
+    <div>
+      <div class="sobretitulo">Registro</div>
+      <h1>Aportes</h1>
+      <p class="descripcion">
+        Dinero enviado desde tu bolsillo al intermediario. Solo el monto neto recibido queda disponible para
+        invertir.
+      </p>
+    </div>
+    @if (estado() === 'listo' && (lista()?.aportes?.length ?? 0) > 0) {
+      <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Registrar aporte
+      </button>
+    }
+  </header>
+
+  @switch (estado()) {
+    @case ('cargando') {
+      <p class="mensaje" role="status">Cargando aportes…</p>
+    }
+
+    @case ('error') {
+      <div class="mensaje mensaje-error" role="alert">
+        <p>No fue posible cargar los aportes. Comprueba que el servidor esté disponible e inténtalo de nuevo.</p>
+        <button type="button" class="boton boton-secundario" (click)="cargar()">Reintentar</button>
+      </div>
+    }
+
+    @case ('listo') {
+      @if (lista(); as datos) {
+        @if (datos.aportes.length === 0) {
+          <div class="vacio">
+            <p>No existen aportes registrados.</p>
+            <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+              Registrar primer aporte
+            </button>
+          </div>
+        } @else {
+          <section class="totales" aria-label="Totales">
+            <div class="cifras">
+              <div>
+                <div class="etiqueta">Aportado desde bolsillo</div>
+                <div class="cifra cifra-principal">{{ datos.totalAportado | currency: 'USD' }}</div>
+              </div>
+              <div>
+                <div class="etiqueta">Neto recibido</div>
+                <div class="cifra">{{ datos.totalNetoBroker | currency: 'USD' }}</div>
+              </div>
+              <div>
+                <div class="etiqueta">Costos de fondeo</div>
+                <div class="cifra">{{ datos.totalCostoFondeo | currency: 'USD' }}</div>
+              </div>
+            </div>
+
+            <div class="distribucion">
+              <div class="barra" aria-hidden="true">
+                <span class="barra-neto" [style.flex-grow]="datos.porcentajeNetoBroker"></span>
+                @if (datos.porcentajeCostoFondeo > 0) {
+                  <span class="barra-costo" [style.flex-grow]="datos.porcentajeCostoFondeo"></span>
+                }
+              </div>
+              <div class="barra-texto">
+                <span>{{ datos.porcentajeNetoBroker | number: '1.2-2' }}% llegó al intermediario</span>
+                <span>{{ datos.porcentajeCostoFondeo | number: '1.2-2' }}% en costos</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="historial">
+            <div class="historial-encabezado">
+              <h2>Historial</h2>
+              <span class="historial-nota">
+                {{ datos.aportes.length }} {{ datos.aportes.length === 1 ? 'aporte' : 'aportes' }} · más reciente primero
+              </span>
+            </div>
+
+            <div class="tabla-contenedor" role="region" aria-label="Historial de aportes" tabindex="0">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Fecha</th>
+                    <th scope="col" class="numero">Aportado</th>
+                    <th scope="col" class="numero">Neto recibido</th>
+                    <th scope="col" class="numero">Costo de fondeo</th>
+                    <th scope="col">Método y comentario</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (aporte of datos.aportes; track aporte.id) {
+                    <tr>
+                      <td class="fecha">{{ fecha(aporte.fechaAporte) }}</td>
+                      <td class="numero destacado">{{ aporte.montoAportado | currency: 'USD' }}</td>
+                      <td class="numero secundario">{{ aporte.montoNetoBroker | currency: 'USD' }}</td>
+                      <td class="numero secundario costo">
+                        {{ aporte.costoFondeo | currency: 'USD' }}
+                        <span class="porcentaje">{{ aporte.porcentajeCostoFondeo | number: '1.2-2' }}%</span>
+                      </td>
+                      <td>
+                        <span class="metodo">{{ aporte.metodoFondeo ?? '—' }}</span>
+                        @if (aporte.comentario) {
+                          <span class="comentario">{{ aporte.comentario }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">Total</th>
+                    <td class="numero total-principal">{{ datos.totalAportado | currency: 'USD' }}</td>
+                    <td class="numero">{{ datos.totalNetoBroker | currency: 'USD' }}</td>
+                    <td class="numero costo">
+                      {{ datos.totalCostoFondeo | currency: 'USD' }}
+                      <span class="porcentaje">{{ datos.porcentajeCostoFondeo | number: '1.2-2' }}%</span>
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <ul class="tarjetas" aria-label="Historial de aportes">
+              @for (aporte of datos.aportes; track aporte.id) {
+                <li>
+                  <div class="tarjeta-cabecera">
+                    <span class="tarjeta-detalle">
+                      <span class="fecha">{{ fecha(aporte.fechaAporte) }}</span>
+                      @if (metodoYComentario(aporte); as detalle) {
+                        <span class="comentario">{{ detalle }}</span>
+                      }
+                    </span>
+                    <span class="tarjeta-monto">
+                      <span class="tarjeta-etiqueta">Aportado</span>
+                      <span class="destacado">{{ aporte.montoAportado | currency: 'USD' }}</span>
+                    </span>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Neto recibido</dt>
+                      <dd>{{ aporte.montoNetoBroker | currency: 'USD' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Costo de fondeo</dt>
+                      <dd class="costo">
+                        {{ aporte.costoFondeo | currency: 'USD' }}
+                        <span class="porcentaje">{{ aporte.porcentajeCostoFondeo | number: '1.2-2' }}%</span>
+                      </dd>
+                    </div>
+                  </dl>
+                </li>
+              }
+              <li class="tarjeta-total">
+                <span>Total</span>
+                <span class="tarjeta-total-valores">
+                  <span class="total-principal">{{ datos.totalAportado | currency: 'USD' }}</span>
+                  <span class="tarjeta-total-detalle">
+                    Neto recibido {{ datos.totalNetoBroker | currency: 'USD' }} · Costo de fondeo
+                    {{ datos.totalCostoFondeo | currency: 'USD' }} {{ datos.porcentajeCostoFondeo | number: '1.2-2' }}%
+                  </span>
+                </span>
+              </li>
+            </ul>
+          </section>
+        }
+      }
+    }
+  }
+</div>

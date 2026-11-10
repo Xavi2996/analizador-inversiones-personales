@@ -22,7 +22,10 @@ interface GrupoNavegacion {
 const GRUPOS_NAVEGACION: GrupoNavegacion[] = [
   {
     titulo: 'Registro',
-    items: [{ ruta: '/activos', etiqueta: 'Activos', icono: 'M4 7h16v13H4zM8 7V4h8v3' }],
+    items: [
+      { ruta: '/activos', etiqueta: 'Activos', icono: 'M4 7h16v13H4zM8 7V4h8v3' },
+      { ruta: '/aportes', etiqueta: 'Aportes', icono: 'M12 3v12M7 10l5 5 5-5M5 21h14' },
+    ],
   },
 ];
 
