@@ -330,57 +330,76 @@ Errores:
 
 POST /api/v1/transacciones
 
-Solicitud de compra:
-
-{
-"activoId": 1,
-"tipoTransaccion": "COMPRA",
-"fechaTransaccion": "2026-10-22",
-"cantidad": 0.12000000,
-"precioUnitario": 770.50,
-"comision": 0.15,
-"comentario": "Compra IVV"
-}
-
-Respuesta 201:
-
-{
-"id": 1,
-"activoId": 1,
-"simbolo": "IVV",
-"tipoTransaccion": "COMPRA",
-"fechaTransaccion": "2026-10-22",
-"cantidad": 0.12000000,
-"precioUnitario": 770.50,
-"montoBruto": 92.46,
-"comision": 0.15,
-"comentario": "Compra IVV"
-}
-
----
-
-## 10.2 Registrar venta
-
-Se utilizará el mismo endpoint:
-
-POST /api/v1/transacciones
+Se utiliza el mismo endpoint para compras y ventas.
 
 Solicitud:
 
 {
 "activoId": 1,
-"tipoTransaccion": "VENTA",
-"fechaTransaccion": "2027-01-15",
-"cantidad": 0.05000000,
-"precioUnitario": 830.00,
-"comision": 0.15
+"tipoTransaccion": "COMPRA",
+"fechaTransaccion": "2026-10-22",
+"cantidad": 0.14553,
+"precioUnitario": 769.57,
+"comision": 0.15,
+"comentario": "Compra IVV"
 }
 
-Antes de implementar ventas deberá existir una especificación aprobada sobre:
+El backend calculará:
 
-- costo de venta,
-- ganancia realizada,
-- método de costo.
+montoBruto =
+cantidad × precioUnitario, redondeado a 2 decimales con `HALF_UP`
+
+efectivoNeto =
+COMPRA: −(montoBruto + comision)
+VENTA: montoBruto − comision
+
+Respuesta 201 (`TransaccionRespuesta`):
+
+{
+"id": 5,
+"activoId": 1,
+"simbolo": "IVV",
+"nombreActivo": "iShares Core S&P 500 ETF",
+"tipoTransaccion": "COMPRA",
+"fechaTransaccion": "2026-10-22",
+"cantidad": 0.14553000,
+"precioUnitario": 769.57,
+"montoBruto": 112.00,
+"comision": 0.15,
+"efectivoNeto": -112.15,
+"comentario": "Compra IVV"
+}
+
+Reglas:
+
+- `activoId` es obligatorio y debe existir.
+- `tipoTransaccion` es obligatorio: `COMPRA` o `VENTA`.
+- `fechaTransaccion` es obligatoria y no puede ser posterior a la fecha actual de negocio en `America/Guayaquil`.
+- `cantidad` es obligatoria, mayor que cero y admite como máximo 8 decimales.
+- `precioUnitario` es obligatorio, mayor que cero y admite como máximo 6 decimales.
+- `comision` es obligatoria, mayor o igual que cero y admite como máximo 2 decimales.
+- En una VENTA, `comision` no puede superar `montoBruto`.
+- En una VENTA, `cantidad` no puede superar la cantidad disponible para vender en `fechaTransaccion` (ver 10.5).
+- `montoBruto` y `efectivoNeto` no se aceptan en la solicitud; si llegan, se ignoran.
+- `comentario` es opcional y admite hasta 500 caracteres. Se recorta; vacío se devuelve como `null`.
+- `cantidad` se devuelve con 8 decimales; montos y comisión con 2.
+- Las fechas técnicas no se exponen.
+
+Errores:
+
+- 400 `DATOS_INVALIDOS`, con `erroresCampos`. Incluye la fecha futura (campo `fechaTransaccion`) y la comisión de venta mayor que el monto bruto (campo `comision`).
+- 404 `ACTIVO_NO_ENCONTRADO`.
+- 409 `CANTIDAD_INSUFICIENTE`: la venta supera la cantidad disponible. El mensaje incluye la cantidad disponible.
+
+No existen `PUT /api/v1/transacciones/{id}` ni `DELETE /api/v1/transacciones/{id}`.
+
+---
+
+## 10.2 Método de costo de las ventas
+
+Las ventas usan costo promedio ponderado móvil (01-modelo-funcional §10.2).
+
+Este recurso no calcula costo ni ganancia realizada. Lo hará el recurso de posiciones.
 
 ---
 
@@ -388,10 +407,36 @@ Antes de implementar ventas deberá existir una especificación aprobada sobre:
 
 GET /api/v1/transacciones
 
-Filtros previstos:
+Filtros opcionales:
 
 ?activoId=
 ?tipo=
+
+Respuesta 200 (`ListaTransaccionesRespuesta`):
+
+{
+"transacciones": [ TransaccionRespuesta, ... ],
+"totalComprado": 503.07,
+"totalVendido": 0.00,
+"totalComisiones": 1.02,
+"conteoCompras": 7,
+"conteoVentas": 0
+}
+
+Reglas:
+
+- `transacciones` se ordena por `fechaTransaccion` descendente y, a igual fecha, por `id` descendente.
+- `totalComprado`, `totalVendido` y `totalComisiones` se calculan sobre la lista filtrada por activo y tipo.
+- `conteoCompras` y `conteoVentas` se calculan solo con el filtro de activo.
+- Sin resultados, `transacciones` es `[]` y los totales y conteos valen 0.
+- Un `activoId` inexistente devuelve una lista vacía.
+
+Errores:
+
+- 400 `DATOS_INVALIDOS` si `tipo` no es `COMPRA` ni `VENTA`.
+
+Filtros futuros:
+
 ?desde=
 ?hasta=
 
@@ -400,6 +445,35 @@ Filtros previstos:
 ## 10.4 Obtener transacción
 
 GET /api/v1/transacciones/{id}
+
+Respuesta 200 con la misma estructura de 10.1.
+
+Errores:
+
+- 404 `TRANSACCION_NO_ENCONTRADA`
+
+---
+
+## 10.5 Cantidad disponible para vender
+
+GET /api/v1/transacciones/disponible?activoId=1&fecha=2026-10-22
+
+`fecha` es opcional; por defecto, la fecha actual de negocio.
+
+Respuesta 200 (`CantidadDisponibleRespuesta`):
+
+{
+"activoId": 1,
+"fecha": "2026-10-22",
+"cantidadDisponible": 0.54308000
+}
+
+La cantidad disponible sigue la regla de 01-modelo-funcional §4.7: el menor saldo entre la fecha indicada y cada fecha posterior con movimientos del activo. Es la misma regla que valida las ventas.
+
+Errores:
+
+- 400 `DATOS_INVALIDOS` si falta `activoId` o el formato de `fecha` es inválido.
+- 404 `ACTIVO_NO_ENCONTRADO`
 
 ---
 
@@ -777,9 +851,11 @@ APORTE_NO_ENCONTRADO
 
 APORTE_INVALIDO
 
+TRANSACCION_NO_ENCONTRADA
+
 TRANSACCION_INVALIDA
 
-CANTIDAD_INSUFICIENTE
+CANTIDAD_INSUFICIENTE: una venta supera la cantidad disponible para vender en su fecha (409).
 
 REFERIDO_INVALIDO
 
@@ -817,6 +893,8 @@ Los siguientes datos deberán ser calculados principalmente por backend:
 
 - costo de fondeo,
 - monto bruto,
+- efectivo neto de la transacción,
+- cantidad disponible para vender,
 - monto neto del dividendo,
 - cantidad actual,
 - costo promedio,

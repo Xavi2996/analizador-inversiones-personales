@@ -303,8 +303,6 @@ No:
 
 No asumir una respuesta definitiva para:
 
-- método de costo de las ventas;
-- validaciones completas de venta;
 - corrección de movimientos históricos;
 - confirmación de fotografías;
 - umbral definitivo de desviación de asignación.
