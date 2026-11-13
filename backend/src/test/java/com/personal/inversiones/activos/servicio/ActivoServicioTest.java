@@ -22,10 +22,12 @@ import com.personal.inversiones.activos.modelo.Moneda;
 import com.personal.inversiones.activos.modelo.TipoActivo;
 import com.personal.inversiones.activos.repositorio.ActivoRepositorio;
 import com.personal.inversiones.compartido.error.ConflictoExcepcion;
+import com.personal.inversiones.transacciones.repositorio.TransaccionRepositorio;
 
 /**
- * Bloqueo del símbolo cuando el activo tiene registros históricos. Esos módulos todavía no existen,
- * así que {@code tieneRegistrosHistoricos} se simula en {@code true}.
+ * Bloqueo del símbolo cuando el activo tiene registros históricos. {@code tieneRegistrosHistoricos}
+ * se simula en {@code true}; la verificación real con transacciones se prueba en
+ * {@code TransaccionControladorIntegracionTest}.
  */
 class ActivoServicioTest {
 
@@ -37,7 +39,7 @@ class ActivoServicioTest {
 	@BeforeEach
 	void preparar() {
 		activoRepositorio = mock(ActivoRepositorio.class);
-		activoServicio = spy(new ActivoServicio(activoRepositorio));
+		activoServicio = spy(new ActivoServicio(activoRepositorio, mock(TransaccionRepositorio.class)));
 		// any(): el activo simulado no tiene id asignado, y la respuesta también consulta el bloqueo.
 		doReturn(true).when(activoServicio).tieneRegistrosHistoricos(any());
 

@@ -2,7 +2,9 @@ package com.personal.inversiones.transacciones;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -248,7 +250,50 @@ class TransaccionControladorIntegracionTest extends PruebaIntegracion {
 		assertThat(transaccionRepositorio.findAll().getFirst().getComentario()).isNull();
 	}
 
+	// --- Bloqueo del símbolo del activo (01-modelo-funcional §2.4) ---
+
+	@Test
+	void activoSinTransaccionesPermiteCambiarElSimbolo() throws Exception {
+		mockMvc.perform(get("/api/v1/activos/" + ivv))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simboloEditable").value(true));
+		actualizarActivo("IVVX", "ETF")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simbolo").value("IVVX"));
+	}
+
+	@Test
+	void activoConTransaccionesBloqueaElSimbolo() throws Exception {
+		registrar(compra("1", "100", "0")).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/v1/activos/" + ivv))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simboloEditable").value(false));
+		actualizarActivo("IVVX", "ETF")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("SIMBOLO_BLOQUEADO"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("simbolo"));
+
+		assertThat(activoRepositorio.findById(ivv).orElseThrow().getSimbolo()).isEqualTo("IVV");
+	}
+
+	@Test
+	void activoConTransaccionesPermiteCambiarElTipo() throws Exception {
+		registrar(compra("1", "100", "0")).andExpect(status().isCreated());
+
+		actualizarActivo("IVV", "ACCION")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simbolo").value("IVV"))
+				.andExpect(jsonPath("$.tipoActivo").value("ACCION"));
+	}
+
 	// --- Utilidades ---
+
+	private ResultActions actualizarActivo(String simbolo, String tipoActivo) throws Exception {
+		return mockMvc.perform(put("/api/v1/activos/" + ivv).contentType(MediaType.APPLICATION_JSON).content("""
+				{"simbolo": "%s", "nombre": "iShares Core S&P 500 ETF", "tipoActivo": "%s", "moneda": "USD"}
+				""".formatted(simbolo, tipoActivo)));
+	}
 
 	private ResultActions registrar(String json) throws Exception {
 		return mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(json));

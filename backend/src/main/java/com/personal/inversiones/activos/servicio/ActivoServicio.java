@@ -14,6 +14,7 @@ import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.repositorio.ActivoRepositorio;
 import com.personal.inversiones.compartido.error.ConflictoExcepcion;
 import com.personal.inversiones.compartido.error.RecursoNoEncontradoExcepcion;
+import com.personal.inversiones.transacciones.repositorio.TransaccionRepositorio;
 
 @Service
 public class ActivoServicio {
@@ -25,9 +26,11 @@ public class ActivoServicio {
 	private static final String RESTRICCION_SIMBOLO_UNICO = "uk_activo_simbolo";
 
 	private final ActivoRepositorio activoRepositorio;
+	private final TransaccionRepositorio transaccionRepositorio;
 
-	public ActivoServicio(ActivoRepositorio activoRepositorio) {
+	public ActivoServicio(ActivoRepositorio activoRepositorio, TransaccionRepositorio transaccionRepositorio) {
 		this.activoRepositorio = activoRepositorio;
+		this.transaccionRepositorio = transaccionRepositorio;
 	}
 
 	@Transactional
@@ -73,10 +76,11 @@ public class ActivoServicio {
 
 	/**
 	 * Indica si el activo tiene transacciones, referidos, dividendos o precios (01-modelo-funcional §2.4).
-	 * Esos módulos todavía no existen; cada spec que los agregue debe incorporar aquí su verificación.
+	 * Hoy solo existen las transacciones; las specs de Referidos, Dividendos y Precios deben incorporar
+	 * aquí su verificación.
 	 */
 	public boolean tieneRegistrosHistoricos(Long activoId) {
-		return false;
+		return transaccionRepositorio.existsByActivoId(activoId);
 	}
 
 	/**
