@@ -10,6 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -285,6 +292,160 @@ class TransaccionControladorIntegracionTest extends PruebaIntegracion {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.simbolo").value("IVV"))
 				.andExpect(jsonPath("$.tipoActivo").value("ACCION"));
+	}
+
+	// --- Ventas (SPEC 003 §3.2 y §3.3) ---
+
+	@Test
+	void ventaTotalEsValidaYCalculaElEfectivoRecibido() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0.15")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "1.0", "110", "0.15"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.tipoTransaccion").value("VENTA"))
+				.andExpect(jsonPath("$.montoBruto").value(110.0))
+				.andExpect(jsonPath("$.efectivoNeto").value(109.85));
+
+		consultarDisponible(ivv, "2026-10-12").andExpect(jsonPath("$.cantidadDisponible").value(0.0));
+	}
+
+	@Test
+	void ventaParcialEsValida() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.25", "110", "0")).andExpect(status().isCreated());
+
+		consultarDisponible(ivv, "2026-10-12").andExpect(jsonPath("$.cantidadDisponible").value(0.75));
+	}
+
+	@Test
+	void ventaRetroactivaQueRompeUnSaldoFuturoDevuelve409() throws Exception {
+		escenarioCompraYVenta();
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-15", "0.5", "105", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"))
+				.andExpect(jsonPath("$.mensaje")
+						.value("La cantidad supera la disponible para vender en esa fecha (0.40000000 IVV)."))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("cantidad"));
+		assertThat(transaccionRepositorio.count()).isEqualTo(2);
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-15", "0.4", "105", "0")).andExpect(status().isCreated());
+		consultarDisponible(ivv, "2026-10-25").andExpect(jsonPath("$.cantidadDisponible").value(0.0));
+	}
+
+	@Test
+	void ventaSinComprasPreviasDevuelve409() throws Exception {
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.1", "100", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"))
+				.andExpect(jsonPath("$.mensaje")
+						.value("La cantidad supera la disponible para vender en esa fecha (0.00000000 IVV)."));
+		assertThat(transaccionRepositorio.count()).isZero();
+	}
+
+	@Test
+	void ventaAnteriorALaCompraDevuelve409() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-09", "0.1", "100", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"));
+	}
+
+	@Test
+	void compraYVentaDelMismoDiaPorLaMismaCantidadEsValida() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-10", "1.0", "101", "0")).andExpect(status().isCreated());
+	}
+
+	@Test
+	void ventaNoUsaLaCantidadDeOtroActivo() throws Exception {
+		Long vxus = activoRepositorio.save(new Activo("VXUS", "Vanguard Total International Stock ETF",
+				TipoActivo.ETF, Moneda.USD)).getId();
+		registrar(compra("1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(vxus, "VENTA", "2026-10-22", "0.1", "80", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.mensaje")
+						.value("La cantidad supera la disponible para vender en esa fecha (0.00000000 VXUS)."));
+	}
+
+	@Test
+	void ventaConComisionMayorAlMontoBrutoDevuelve400() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		// 0.001 × 100 = 0.10 de monto bruto.
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.001", "100", "0.11"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("comision"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje")
+						.value("No puede ser mayor que el monto bruto de la venta."));
+		assertThat(transaccionRepositorio.count()).isEqualTo(1);
+	}
+
+	@Test
+	void ventaConComisionIgualAlMontoBrutoEsValida() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.001", "100", "0.10"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.efectivoNeto").value(0.0));
+	}
+
+	@Test
+	void compraConComisionMayorAlMontoBrutoEsValida() throws Exception {
+		registrar(compra("0.001", "100", "0.15"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.montoBruto").value(0.1))
+				.andExpect(jsonPath("$.efectivoNeto").value(-0.25));
+	}
+
+	@Test
+	void ventaConDatosInvalidosResponde400AntesQue409() throws Exception {
+		registrar(transaccion(ivv, "VENTA", LocalDate.now(clock).plusDays(1).toString(), "1", "100", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("fechaTransaccion"));
+	}
+
+	@Test
+	void ventaConActivoInexistenteDevuelve404() throws Exception {
+		registrar(transaccion(999L, "VENTA", "2026-10-12", "1", "100", "0"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("ACTIVO_NO_ENCONTRADO"));
+	}
+
+	/**
+	 * Dos ventas simultáneas de 0.6 con un saldo de 1.0: el bloqueo de la fila del activo hace que se
+	 * validen una tras otra, así que solo una se registra.
+	 */
+	@Test
+	void ventasSimultaneasNoSuperanElDisponible() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+		String venta = transaccion(ivv, "VENTA", "2026-10-12", "0.6", "110", "0");
+
+		ExecutorService ejecutor = Executors.newFixedThreadPool(2);
+		CountDownLatch salida = new CountDownLatch(1);
+		try {
+			List<Future<Integer>> resultados = new ArrayList<>();
+			for (int i = 0; i < 2; i++) {
+				resultados.add(ejecutor.submit(() -> {
+					salida.await();
+					return registrar(venta).andReturn().getResponse().getStatus();
+				}));
+			}
+			salida.countDown();
+			List<Integer> estados = new ArrayList<>();
+			for (Future<Integer> resultado : resultados) {
+				estados.add(resultado.get(30, TimeUnit.SECONDS));
+			}
+			assertThat(estados).containsExactlyInAnyOrder(201, 409);
+		} finally {
+			ejecutor.shutdownNow();
+		}
+		consultarDisponible(ivv, "2026-10-12").andExpect(jsonPath("$.cantidadDisponible").value(0.4));
 	}
 
 	// --- Cantidad disponible (SPEC 003 §3.3) ---

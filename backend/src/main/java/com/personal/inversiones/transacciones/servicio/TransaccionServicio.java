@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.servicio.ActivoServicio;
+import com.personal.inversiones.compartido.error.ConflictoExcepcion;
 import com.personal.inversiones.compartido.error.DatosInvalidosExcepcion;
 import com.personal.inversiones.compartido.error.ErrorCampo;
 import com.personal.inversiones.transacciones.dto.CantidadDisponibleRespuesta;
@@ -24,6 +25,8 @@ import com.personal.inversiones.transacciones.servicio.CalculoCantidadDisponible
 
 @Service
 public class TransaccionServicio {
+
+	public static final String CANTIDAD_INSUFICIENTE = "CANTIDAD_INSUFICIENTE";
 
 	/** Montos en USD: se devuelven con 2 decimales. */
 	private static final int ESCALA_MONTO = 2;
@@ -43,11 +46,23 @@ public class TransaccionServicio {
 		this.clock = clock;
 	}
 
+	/**
+	 * Orden de validación: datos de la solicitud (400), activo existente (404) y, en ventas,
+	 * cantidad disponible en la fecha (409).
+	 * En una venta la fila del activo queda bloqueada hasta el commit, así dos ventas simultáneas del mismo
+	 * activo se validan una después de la otra (SPEC 003 §3.3).
+	 */
 	@Transactional
 	public TransaccionRespuesta registrar(CrearTransaccionSolicitud solicitud) {
-		validar(solicitud);
-		Activo activo = activoServicio.buscar(solicitud.activoId());
 		BigDecimal montoBruto = calcularMontoBruto(solicitud.cantidad(), solicitud.precioUnitario());
+		validar(solicitud, montoBruto);
+		boolean esVenta = solicitud.tipoTransaccion() == TipoTransaccion.VENTA;
+		Activo activo = esVenta
+				? activoServicio.buscarConBloqueo(solicitud.activoId())
+				: activoServicio.buscar(solicitud.activoId());
+		if (esVenta) {
+			validarCantidadDisponible(activo, solicitud.fechaTransaccion(), solicitud.cantidad());
+		}
 		Transaccion transaccion = new Transaccion(activo, solicitud.tipoTransaccion(), solicitud.fechaTransaccion(),
 				solicitud.cantidad(), solicitud.precioUnitario(), montoBruto, solicitud.comision(),
 				solicitud.comentario());
@@ -101,15 +116,33 @@ public class TransaccionServicio {
 	}
 
 	/**
-	 * Reglas que Bean Validation no cubre: la fecha depende del reloj de negocio (01-modelo-funcional §17).
+	 * Reglas que Bean Validation no cubre: la fecha depende del reloj de negocio (01-modelo-funcional §17)
+	 * y, en una venta, la comisión se compara con el monto bruto calculado (01-modelo-funcional §4.8).
 	 */
-	private void validar(CrearTransaccionSolicitud solicitud) {
+	private void validar(CrearTransaccionSolicitud solicitud, BigDecimal montoBruto) {
 		List<ErrorCampo> errores = new ArrayList<>();
 		if (solicitud.fechaTransaccion().isAfter(LocalDate.now(clock))) {
 			errores.add(new ErrorCampo("fechaTransaccion", "No puede ser una fecha futura."));
 		}
+		if (solicitud.tipoTransaccion() == TipoTransaccion.VENTA && solicitud.comision().compareTo(montoBruto) > 0) {
+			errores.add(new ErrorCampo("comision", "No puede ser mayor que el monto bruto de la venta."));
+		}
 		if (!errores.isEmpty()) {
 			throw new DatosInvalidosExcepcion(errores);
+		}
+	}
+
+	/**
+	 * Una venta no puede superar la cantidad disponible en su fecha (01-modelo-funcional §4.7):
+	 * así no deja el saldo negativo en esa fecha ni en ninguna posterior.
+	 */
+	private void validarCantidadDisponible(Activo activo, LocalDate fecha, BigDecimal cantidadVendida) {
+		BigDecimal disponible = cantidadDisponible(activo.getId(), fecha);
+		if (cantidadVendida.compareTo(disponible) > 0) {
+			throw new ConflictoExcepcion(CANTIDAD_INSUFICIENTE,
+					"La cantidad supera la disponible para vender en esa fecha (%s %s)."
+							.formatted(cantidad(disponible).toPlainString(), activo.getSimbolo()),
+					"cantidad");
 		}
 	}
 

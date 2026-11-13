@@ -87,9 +87,20 @@ public class ActivoServicio {
 	 * Lo usan también otros módulos que referencian un activo, para responder el mismo 404.
 	 */
 	public Activo buscar(Long id) {
-		return activoRepositorio.findById(id)
-				.orElseThrow(() -> new RecursoNoEncontradoExcepcion(ACTIVO_NO_ENCONTRADO,
-						"No existe el activo solicitado."));
+		return activoRepositorio.findById(id).orElseThrow(ActivoServicio::activoNoEncontrado);
+	}
+
+	/**
+	 * Igual que {@link #buscar(Long)}, pero bloquea la fila del activo hasta el fin de la transacción
+	 * ({@code SELECT ... FOR UPDATE}). Lo usan las ventas para que dos registros simultáneos no superen
+	 * la cantidad disponible (SPEC 003 §3.3). Debe llamarse dentro de una transacción.
+	 */
+	public Activo buscarConBloqueo(Long id) {
+		return activoRepositorio.buscarConBloqueoPorId(id).orElseThrow(ActivoServicio::activoNoEncontrado);
+	}
+
+	private static RecursoNoEncontradoExcepcion activoNoEncontrado() {
+		return new RecursoNoEncontradoExcepcion(ACTIVO_NO_ENCONTRADO, "No existe el activo solicitado.");
 	}
 
 	/**
