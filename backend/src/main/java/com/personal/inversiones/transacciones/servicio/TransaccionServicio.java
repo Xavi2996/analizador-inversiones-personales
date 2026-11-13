@@ -14,11 +14,13 @@ import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.servicio.ActivoServicio;
 import com.personal.inversiones.compartido.error.DatosInvalidosExcepcion;
 import com.personal.inversiones.compartido.error.ErrorCampo;
+import com.personal.inversiones.transacciones.dto.CantidadDisponibleRespuesta;
 import com.personal.inversiones.transacciones.dto.CrearTransaccionSolicitud;
 import com.personal.inversiones.transacciones.dto.TransaccionRespuesta;
 import com.personal.inversiones.transacciones.modelo.TipoTransaccion;
 import com.personal.inversiones.transacciones.modelo.Transaccion;
 import com.personal.inversiones.transacciones.repositorio.TransaccionRepositorio;
+import com.personal.inversiones.transacciones.servicio.CalculoCantidadDisponible.Movimiento;
 
 @Service
 public class TransaccionServicio {
@@ -50,6 +52,35 @@ public class TransaccionServicio {
 				solicitud.cantidad(), solicitud.precioUnitario(), montoBruto, solicitud.comision(),
 				solicitud.comentario());
 		return aRespuesta(transaccionRepositorio.save(transaccion));
+	}
+
+	/**
+	 * Cantidad disponible para vender en {@code fecha} (01-modelo-funcional §4.7); sin fecha, hoy de negocio.
+	 * Es la misma regla que valida las ventas.
+	 */
+	@Transactional(readOnly = true)
+	public CantidadDisponibleRespuesta disponible(Long activoId, LocalDate fecha) {
+		if (activoId == null) {
+			throw new DatosInvalidosExcepcion(List.of(new ErrorCampo("activoId", "Es obligatorio.")));
+		}
+		activoServicio.buscar(activoId);
+		LocalDate fechaConsulta = fecha != null ? fecha : LocalDate.now(clock);
+		return new CantidadDisponibleRespuesta(activoId, fechaConsulta,
+				cantidad(cantidadDisponible(activoId, fechaConsulta)));
+	}
+
+	private BigDecimal cantidadDisponible(Long activoId, LocalDate fecha) {
+		List<Movimiento> movimientos = transaccionRepositorio.findByActivoId(activoId).stream()
+				.map(TransaccionServicio::aMovimiento)
+				.toList();
+		return CalculoCantidadDisponible.calcular(movimientos, fecha);
+	}
+
+	private static Movimiento aMovimiento(Transaccion transaccion) {
+		BigDecimal cantidad = transaccion.getTipoTransaccion() == TipoTransaccion.COMPRA
+				? transaccion.getCantidad()
+				: transaccion.getCantidad().negate();
+		return new Movimiento(transaccion.getFechaTransaccion(), cantidad);
 	}
 
 	/**

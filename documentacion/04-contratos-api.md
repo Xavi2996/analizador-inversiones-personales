@@ -81,6 +81,20 @@ Ejemplo:
 
 En backend serán tratados con BigDecimal.
 
+Los valores numéricos de las respuestas (montos, precios, cantidades y porcentajes) se escriben siempre en notación decimal, nunca en notación científica, y conservan la escala que define cada contrato.
+
+Ejemplo:
+
+{
+"cantidadDisponible": 0.00000000
+}
+
+y no:
+
+{
+"cantidadDisponible": 0E-8
+}
+
 ---
 
 # 7. Respuesta estándar de error

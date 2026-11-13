@@ -287,7 +287,104 @@ class TransaccionControladorIntegracionTest extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tipoActivo").value("ACCION"));
 	}
 
+	// --- Cantidad disponible (SPEC 003 §3.3) ---
+
+	@Test
+	void disponibleAplicaLaReglaCronologica() throws Exception {
+		escenarioCompraYVenta();
+
+		consultarDisponible(ivv, "2026-10-15")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.activoId").value(ivv))
+				.andExpect(jsonPath("$.fecha").value("2026-10-15"))
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"cantidadDisponible\":0.40000000"));
+	}
+
+	@Test
+	void disponibleSinMovimientosPosterioresEsElSaldoDeEsaFecha() throws Exception {
+		escenarioCompraYVenta();
+
+		consultarDisponible(ivv, "2026-10-25")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.cantidadDisponible").value(0.4));
+	}
+
+	@Test
+	void disponibleAntesDeTodaCompraEsCero() throws Exception {
+		escenarioCompraYVenta();
+
+		consultarDisponible(ivv, "2026-10-05")
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"cantidadDisponible\":0.00000000"));
+	}
+
+	@Test
+	void lasCantidadesPequenasNoUsanNotacionCientifica() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-22", "0.00000099", "81606", "0"))
+				.andExpect(status().isCreated())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"cantidad\":0.00000099"));
+	}
+
+	@Test
+	void disponibleSinFechaUsaHoy() throws Exception {
+		escenarioCompraYVenta();
+
+		mockMvc.perform(get(RUTA + "/disponible").param("activoId", ivv.toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.fecha").value(LocalDate.now(clock).toString()))
+				.andExpect(jsonPath("$.cantidadDisponible").value(0.4));
+	}
+
+	@Test
+	void disponibleSoloConsideraElActivoConsultado() throws Exception {
+		Long vxus = activoRepositorio.save(new Activo("VXUS", "Vanguard Total International Stock ETF",
+				TipoActivo.ETF, Moneda.USD)).getId();
+		registrar(compra("1.0", "100", "0")).andExpect(status().isCreated());
+		registrar(transaccion(vxus, "COMPRA", "2026-10-22", "5", "80", "0")).andExpect(status().isCreated());
+
+		consultarDisponible(vxus, "2026-10-22")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.cantidadDisponible").value(5.0));
+	}
+
+	@Test
+	void disponibleConActivoInexistenteDevuelve404() throws Exception {
+		consultarDisponible(999L, "2026-10-15")
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("ACTIVO_NO_ENCONTRADO"));
+	}
+
+	@Test
+	void disponibleSinActivoDevuelve400() throws Exception {
+		mockMvc.perform(get(RUTA + "/disponible"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("activoId"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("Es obligatorio."));
+	}
+
+	@Test
+	void disponibleConFechaMalFormadaDevuelve400() throws Exception {
+		consultarDisponible(ivv, "15/10/2026")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("fecha"));
+	}
+
 	// --- Utilidades ---
+
+	/** Compra 1.0 el 10/10 y venta 0.6 el 20/10 (ejemplo de SPEC 003 §3.3). */
+	private void escenarioCompraYVenta() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+		registrar(transaccion(ivv, "VENTA", "2026-10-20", "0.6", "110", "0")).andExpect(status().isCreated());
+	}
+
+	private ResultActions consultarDisponible(Long activoId, String fecha) throws Exception {
+		return mockMvc.perform(get(RUTA + "/disponible").param("activoId", activoId.toString()).param("fecha", fecha));
+	}
 
 	private ResultActions actualizarActivo(String simbolo, String tipoActivo) throws Exception {
 		return mockMvc.perform(put("/api/v1/activos/" + ivv).contentType(MediaType.APPLICATION_JSON).content("""
