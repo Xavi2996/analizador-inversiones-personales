@@ -1,7 +1,9 @@
 package com.personal.inversiones.transacciones;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -25,6 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.jayway.jsonpath.JsonPath;
 import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.modelo.Moneda;
 import com.personal.inversiones.activos.modelo.TipoActivo;
@@ -448,6 +451,165 @@ class TransaccionControladorIntegracionTest extends PruebaIntegracion {
 		consultarDisponible(ivv, "2026-10-12").andExpect(jsonPath("$.cantidadDisponible").value(0.4));
 	}
 
+	// --- Consultar (SPEC 003 §3.6) ---
+
+	/**
+	 * c1: IVV COMPRA 10/10 1.0 × 100 (0.15) → 100.00
+	 * v1: IVV VENTA 20/10 0.5 × 110 (0.20) → 55.00
+	 * x1: VXUS COMPRA 15/10 2 × 50 (0.10) → 100.00
+	 * c2: IVV COMPRA 20/10 0.5 × 120 (0.15) → 60.00, misma fecha que v1 pero registrada después.
+	 */
+	private record Historial(Long vxus, Long c1, Long v1, Long x1, Long c2) {
+	}
+
+	private Historial registrarHistorial() throws Exception {
+		Long vxus = activoRepositorio.save(new Activo("VXUS", "Vanguard Total International Stock ETF",
+				TipoActivo.ETF, Moneda.USD)).getId();
+		Long c1 = idRegistrado(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0.15"));
+		Long v1 = idRegistrado(transaccion(ivv, "VENTA", "2026-10-20", "0.5", "110", "0.20"));
+		Long x1 = idRegistrado(transaccion(vxus, "COMPRA", "2026-10-15", "2", "50", "0.10"));
+		Long c2 = idRegistrado(transaccion(ivv, "COMPRA", "2026-10-20", "0.5", "120", "0.15"));
+		return new Historial(vxus, c1, v1, x1, c2);
+	}
+
+	@Test
+	void listarOrdenaPorFechaEIdDescendentesYCalculaTotales() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones.length()").value(4))
+				.andExpect(jsonPath("$.transacciones[0].id").value(h.c2()))
+				.andExpect(jsonPath("$.transacciones[1].id").value(h.v1()))
+				.andExpect(jsonPath("$.transacciones[2].id").value(h.x1()))
+				.andExpect(jsonPath("$.transacciones[3].id").value(h.c1()))
+				.andExpect(jsonPath("$.transacciones[1].simbolo").value("IVV"))
+				.andExpect(jsonPath("$.transacciones[1].efectivoNeto").value(54.8))
+				.andExpect(jsonPath("$.transacciones[2].simbolo").value("VXUS"))
+				.andExpect(jsonPath("$.totalComprado").value(260.0))
+				.andExpect(jsonPath("$.totalVendido").value(55.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.6))
+				.andExpect(jsonPath("$.conteoCompras").value(3))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarFiltraPorActivo() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("activoId", ivv.toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones[*].id").value(contains(
+						h.c2().intValue(), h.v1().intValue(), h.c1().intValue())))
+				.andExpect(jsonPath("$.totalComprado").value(160.0))
+				.andExpect(jsonPath("$.totalVendido").value(55.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.5))
+				.andExpect(jsonPath("$.conteoCompras").value(2))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarConActivoYTipoCalculaTotalesFiltradosYConteosSoloPorActivo() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("activoId", ivv.toString()).param("tipo", "COMPRA"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones[*].id").value(contains(h.c2().intValue(), h.c1().intValue())))
+				.andExpect(jsonPath("$.totalComprado").value(160.0))
+				.andExpect(jsonPath("$.totalVendido").value(0.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.3))
+				// Los conteos ignoran el filtro de tipo: alimentan las pestañas Todas / Compras / Ventas.
+				.andExpect(jsonPath("$.conteoCompras").value(2))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarFiltraPorTipo() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("tipo", "VENTA"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones[*].id").value(contains(h.v1().intValue())))
+				.andExpect(jsonPath("$.totalComprado").value(0.0))
+				.andExpect(jsonPath("$.totalVendido").value(55.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.2))
+				.andExpect(jsonPath("$.conteoCompras").value(3))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarSinTransaccionesDevuelveListaVaciaYCeros() throws Exception {
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones.length()").value(0))
+				.andExpect(jsonPath("$.conteoCompras").value(0))
+				.andExpect(jsonPath("$.conteoVentas").value(0))
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"totalComprado\":0.00", "\"totalVendido\":0.00", "\"totalComisiones\":0.00"));
+	}
+
+	@Test
+	void listarConActivoInexistenteDevuelveListaVacia() throws Exception {
+		registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("activoId", "999"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones.length()").value(0))
+				.andExpect(jsonPath("$.totalComprado").value(0.0))
+				.andExpect(jsonPath("$.conteoCompras").value(0));
+	}
+
+	@Test
+	void listarConTipoInvalidoDevuelve400() throws Exception {
+		mockMvc.perform(get(RUTA).param("tipo", "OTRO"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("tipo"));
+	}
+
+	@Test
+	void obtenerDevuelveLaTransaccion() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA + "/" + h.v1()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(h.v1()))
+				.andExpect(jsonPath("$.activoId").value(ivv))
+				.andExpect(jsonPath("$.simbolo").value("IVV"))
+				.andExpect(jsonPath("$.nombreActivo").value("iShares Core S&P 500 ETF"))
+				.andExpect(jsonPath("$.tipoTransaccion").value("VENTA"))
+				.andExpect(jsonPath("$.fechaTransaccion").value("2026-10-20"))
+				.andExpect(jsonPath("$.cantidad").value(0.5))
+				.andExpect(jsonPath("$.precioUnitario").value(110.0))
+				.andExpect(jsonPath("$.montoBruto").value(55.0))
+				.andExpect(jsonPath("$.comision").value(0.2))
+				.andExpect(jsonPath("$.efectivoNeto").value(54.8))
+				.andExpect(jsonPath("$.fechaCreacion").doesNotExist())
+				.andExpect(jsonPath("$.fechaActualizacion").doesNotExist());
+	}
+
+	@Test
+	void obtenerInexistenteDevuelve404() throws Exception {
+		mockMvc.perform(get(RUTA + "/999"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("TRANSACCION_NO_ENCONTRADA"))
+				.andExpect(jsonPath("$.ruta").value(RUTA + "/999"));
+	}
+
+	@Test
+	void editarOEliminarNoEstanPermitidos() throws Exception {
+		Long id = idRegistrado(compra("1", "100", "0"));
+
+		mockMvc.perform(put(RUTA + "/" + id).contentType(MediaType.APPLICATION_JSON).content(compra("2", "100", "0")))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+		mockMvc.perform(delete(RUTA + "/" + id))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+
+		assertThat(transaccionRepositorio.count()).isEqualTo(1);
+	}
+
 	// --- Cantidad disponible (SPEC 003 §3.3) ---
 
 	@Test
@@ -551,6 +713,12 @@ class TransaccionControladorIntegracionTest extends PruebaIntegracion {
 		return mockMvc.perform(put("/api/v1/activos/" + ivv).contentType(MediaType.APPLICATION_JSON).content("""
 				{"simbolo": "%s", "nombre": "iShares Core S&P 500 ETF", "tipoActivo": "%s", "moneda": "USD"}
 				""".formatted(simbolo, tipoActivo)));
+	}
+
+	private Long idRegistrado(String json) throws Exception {
+		String cuerpo = registrar(json).andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		return Long.valueOf(JsonPath.read(cuerpo, "$.id").toString());
 	}
 
 	private ResultActions registrar(String json) throws Exception {

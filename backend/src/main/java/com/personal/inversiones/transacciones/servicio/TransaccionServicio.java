@@ -15,8 +15,10 @@ import com.personal.inversiones.activos.servicio.ActivoServicio;
 import com.personal.inversiones.compartido.error.ConflictoExcepcion;
 import com.personal.inversiones.compartido.error.DatosInvalidosExcepcion;
 import com.personal.inversiones.compartido.error.ErrorCampo;
+import com.personal.inversiones.compartido.error.RecursoNoEncontradoExcepcion;
 import com.personal.inversiones.transacciones.dto.CantidadDisponibleRespuesta;
 import com.personal.inversiones.transacciones.dto.CrearTransaccionSolicitud;
+import com.personal.inversiones.transacciones.dto.ListaTransaccionesRespuesta;
 import com.personal.inversiones.transacciones.dto.TransaccionRespuesta;
 import com.personal.inversiones.transacciones.modelo.TipoTransaccion;
 import com.personal.inversiones.transacciones.modelo.Transaccion;
@@ -27,6 +29,7 @@ import com.personal.inversiones.transacciones.servicio.CalculoCantidadDisponible
 public class TransaccionServicio {
 
 	public static final String CANTIDAD_INSUFICIENTE = "CANTIDAD_INSUFICIENTE";
+	public static final String TRANSACCION_NO_ENCONTRADA = "TRANSACCION_NO_ENCONTRADA";
 
 	/** Montos en USD: se devuelven con 2 decimales. */
 	private static final int ESCALA_MONTO = 2;
@@ -67,6 +70,45 @@ public class TransaccionServicio {
 				solicitud.cantidad(), solicitud.precioUnitario(), montoBruto, solicitud.comision(),
 				solicitud.comentario());
 		return aRespuesta(transaccionRepositorio.save(transaccion));
+	}
+
+	/**
+	 * Historial por fecha e id descendentes. {@code activoId} y {@code tipo} son opcionales;
+	 * un activo inexistente devuelve una lista vacía. Los conteos ignoran el filtro de tipo.
+	 */
+	@Transactional(readOnly = true)
+	public ListaTransaccionesRespuesta listar(Long activoId, TipoTransaccion tipo) {
+		List<Transaccion> delActivo = activoId == null
+				? transaccionRepositorio.listarConActivo()
+				: transaccionRepositorio.listarConActivoPorActivoId(activoId);
+		long conteoCompras = delActivo.stream().filter(t -> t.getTipoTransaccion() == TipoTransaccion.COMPRA).count();
+		long conteoVentas = delActivo.size() - conteoCompras;
+
+		List<Transaccion> filtradas = tipo == null
+				? delActivo
+				: delActivo.stream().filter(t -> t.getTipoTransaccion() == tipo).toList();
+		return new ListaTransaccionesRespuesta(
+				filtradas.stream().map(this::aRespuesta).toList(),
+				monto(sumarMontoBruto(filtradas, TipoTransaccion.COMPRA)),
+				monto(sumarMontoBruto(filtradas, TipoTransaccion.VENTA)),
+				monto(filtradas.stream().map(Transaccion::getComision).reduce(BigDecimal.ZERO, BigDecimal::add)),
+				conteoCompras,
+				conteoVentas);
+	}
+
+	@Transactional(readOnly = true)
+	public TransaccionRespuesta obtener(Long id) {
+		return transaccionRepositorio.buscarConActivo(id)
+				.map(this::aRespuesta)
+				.orElseThrow(() -> new RecursoNoEncontradoExcepcion(TRANSACCION_NO_ENCONTRADA,
+						"No existe la transacción solicitada."));
+	}
+
+	private static BigDecimal sumarMontoBruto(List<Transaccion> transacciones, TipoTransaccion tipo) {
+		return transacciones.stream()
+				.filter(t -> t.getTipoTransaccion() == tipo)
+				.map(Transaccion::getMontoBruto)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 	/**
