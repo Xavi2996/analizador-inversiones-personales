@@ -4,9 +4,13 @@ import { Subscription } from 'rxjs';
 import { Activo } from '../activos/activo.model';
 import { ActivoService } from '../activos/activo.service';
 import { ListaTransacciones, TipoTransaccion } from './transaccion.model';
+import { TransaccionFormComponent } from './transaccion-form.component';
 import { TransaccionService } from './transaccion.service';
 
 type EstadoCarga = 'cargando' | 'listo' | 'error';
+
+/** Tiempo que el aviso permanece visible (guía §39: desaparece sin bloquear). */
+const DURACION_AVISO_MS = 4000;
 
 /** Pestañas Todas / Compras / Ventas; `null` es "Todas". */
 interface Pestana {
@@ -27,7 +31,7 @@ const PESTANAS: Pestana[] = [
  */
 @Component({
   selector: 'app-transacciones-pagina',
-  imports: [CurrencyPipe, DecimalPipe, NgTemplateOutlet],
+  imports: [CurrencyPipe, DecimalPipe, NgTemplateOutlet, TransaccionFormComponent],
   templateUrl: './transacciones-pagina.component.html',
   styleUrl: './transacciones-pagina.component.css',
 })
@@ -43,6 +47,7 @@ export class TransaccionesPaginaComponent implements OnInit {
   protected readonly tipo = signal<TipoTransaccion | null>(null);
   protected readonly activoId = signal<number | null>(null);
   protected readonly formularioAbierto = signal(false);
+  protected readonly aviso = signal<string | null>(null);
 
   /** Sin filtros y sin transacciones: estado vacío de la pantalla, sin filtros ni historial. */
   protected readonly sinTransacciones = computed(() => {
@@ -71,9 +76,13 @@ export class TransaccionesPaginaComponent implements OnInit {
   });
 
   private consulta?: Subscription;
+  private temporizadorAviso?: ReturnType<typeof setTimeout>;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.consulta?.unsubscribe());
+    inject(DestroyRef).onDestroy(() => {
+      this.consulta?.unsubscribe();
+      clearTimeout(this.temporizadorAviso);
+    });
   }
 
   ngOnInit(): void {
@@ -145,9 +154,17 @@ export class TransaccionesPaginaComponent implements OnInit {
     return datos.conteoCompras + datos.conteoVentas;
   }
 
-  /** El formulario de registro se incorpora en el paso 10 de la spec 003. */
   protected abrirRegistro(): void {
     this.formularioAbierto.set(true);
+  }
+
+  /** Cierra el panel, confirma el registro y recarga historial, totales y conteos con los filtros actuales. */
+  protected alGuardar(tipo: TipoTransaccion): void {
+    this.formularioAbierto.set(false);
+    clearTimeout(this.temporizadorAviso);
+    this.aviso.set(tipo === 'COMPRA' ? 'Compra registrada correctamente.' : 'Venta registrada correctamente.');
+    this.temporizadorAviso = setTimeout(() => this.aviso.set(null), DURACION_AVISO_MS);
+    this.cargar();
   }
 
   /** Mensaje cuando los filtros no devuelven transacciones pero sí existen otras. */

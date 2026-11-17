@@ -119,7 +119,7 @@ describe('TransaccionesPaginaComponent', () => {
   it('muestra el estado de carga mientras consulta la API', () => {
     expect(texto('[role="status"]')).toBe('Cargando transacciones…');
     responder(LISTA_COMPRAS);
-    expect(elemento.querySelector('[role="status"]')).toBeNull();
+    expect(elemento.querySelector('p[role="status"]')).toBeNull();
   });
 
   it('consulta sin filtros al abrir la pantalla', () => {
@@ -284,5 +284,51 @@ describe('TransaccionesPaginaComponent', () => {
     consulta().flush({ ...LISTA_MIXTA, transacciones: [LISTA_MIXTA.transacciones[0]] });
     fixture.detectChanges();
     expect(elemento.querySelectorAll('tbody tr').length).toBe(1);
+  });
+
+  it('abre el formulario desde el estado vacío', () => {
+    responder(LISTA_VACIA);
+
+    elemento.querySelector<HTMLButtonElement>('.vacio button')!.click();
+    fixture.detectChanges();
+    expect(elemento.querySelector('app-transaccion-form')).not.toBeNull();
+  });
+
+  it('al registrar una venta cierra el panel, confirma y recarga con los filtros actuales', () => {
+    responder(LISTA_MIXTA);
+    pestanas()[2].click();
+    fixture.detectChanges();
+    responder(LISTA_MIXTA);
+
+    elemento.querySelector<HTMLButtonElement>('.encabezado .boton-primario')!.click();
+    fixture.detectChanges();
+    const formulario = elemento.querySelector('app-transaccion-form')!;
+    expect(formulario).not.toBeNull();
+
+    // El formulario emite el tipo registrado (sus pruebas cubren el envío).
+    fixture.debugElement
+      .query((nodo) => nodo.name === 'app-transaccion-form')
+      .triggerEventHandler('guardado', 'VENTA');
+    fixture.detectChanges();
+
+    expect(elemento.querySelector('app-transaccion-form')).toBeNull();
+    expect(texto('.aviso')).toBe('✓ Venta registrada correctamente.');
+    const recarga = consulta();
+    expect(recarga.request.params.get('tipo')).toBe('VENTA');
+    recarga.flush(LISTA_MIXTA);
+  });
+
+  it('confirma una compra con su propio mensaje', () => {
+    responder(LISTA_COMPRAS);
+    elemento.querySelector<HTMLButtonElement>('.encabezado .boton-primario')!.click();
+    fixture.detectChanges();
+
+    fixture.debugElement
+      .query((nodo) => nodo.name === 'app-transaccion-form')
+      .triggerEventHandler('guardado', 'COMPRA');
+    fixture.detectChanges();
+
+    expect(texto('.aviso')).toBe('✓ Compra registrada correctamente.');
+    consulta().flush(LISTA_COMPRAS);
   });
 });
