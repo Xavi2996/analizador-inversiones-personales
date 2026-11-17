@@ -1,6 +1,6 @@
 # SPEC 003 — Transacciones
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 001, SPEC 002
 > **Fecha:** 2026-11-10
 > **Objetivo:** Registrar y consultar compras y ventas de activos, con el monto bruto y el efectivo neto calculados por el backend y validación cronológica de la cantidad vendida, desde una pantalla Transacciones.
