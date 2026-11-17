@@ -14,6 +14,7 @@ import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.repositorio.ActivoRepositorio;
 import com.personal.inversiones.compartido.error.ConflictoExcepcion;
 import com.personal.inversiones.compartido.error.RecursoNoEncontradoExcepcion;
+import com.personal.inversiones.transacciones.repositorio.TransaccionRepositorio;
 
 @Service
 public class ActivoServicio {
@@ -25,9 +26,11 @@ public class ActivoServicio {
 	private static final String RESTRICCION_SIMBOLO_UNICO = "uk_activo_simbolo";
 
 	private final ActivoRepositorio activoRepositorio;
+	private final TransaccionRepositorio transaccionRepositorio;
 
-	public ActivoServicio(ActivoRepositorio activoRepositorio) {
+	public ActivoServicio(ActivoRepositorio activoRepositorio, TransaccionRepositorio transaccionRepositorio) {
 		this.activoRepositorio = activoRepositorio;
+		this.transaccionRepositorio = transaccionRepositorio;
 	}
 
 	@Transactional
@@ -73,19 +76,31 @@ public class ActivoServicio {
 
 	/**
 	 * Indica si el activo tiene transacciones, referidos, dividendos o precios (01-modelo-funcional §2.4).
-	 * Esos módulos todavía no existen; cada spec que los agregue debe incorporar aquí su verificación.
+	 * Hoy solo existen las transacciones; las specs de Referidos, Dividendos y Precios deben incorporar
+	 * aquí su verificación.
 	 */
 	public boolean tieneRegistrosHistoricos(Long activoId) {
-		return false;
+		return transaccionRepositorio.existsByActivoId(activoId);
 	}
 
 	/**
 	 * Lo usan también otros módulos que referencian un activo, para responder el mismo 404.
 	 */
 	public Activo buscar(Long id) {
-		return activoRepositorio.findById(id)
-				.orElseThrow(() -> new RecursoNoEncontradoExcepcion(ACTIVO_NO_ENCONTRADO,
-						"No existe el activo solicitado."));
+		return activoRepositorio.findById(id).orElseThrow(ActivoServicio::activoNoEncontrado);
+	}
+
+	/**
+	 * Igual que {@link #buscar(Long)}, pero bloquea la fila del activo hasta el fin de la transacción
+	 * ({@code SELECT ... FOR UPDATE}). Lo usan las ventas para que dos registros simultáneos no superen
+	 * la cantidad disponible (SPEC 003 §3.3). Debe llamarse dentro de una transacción.
+	 */
+	public Activo buscarConBloqueo(Long id) {
+		return activoRepositorio.buscarConBloqueoPorId(id).orElseThrow(ActivoServicio::activoNoEncontrado);
+	}
+
+	private static RecursoNoEncontradoExcepcion activoNoEncontrado() {
+		return new RecursoNoEncontradoExcepcion(ACTIVO_NO_ENCONTRADO, "No existe el activo solicitado.");
 	}
 
 	/**

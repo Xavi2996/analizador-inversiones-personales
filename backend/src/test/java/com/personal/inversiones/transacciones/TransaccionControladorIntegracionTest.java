@@ -1,0 +1,747 @@
+package com.personal.inversiones.transacciones;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+
+import com.jayway.jsonpath.JsonPath;
+import com.personal.inversiones.activos.modelo.Activo;
+import com.personal.inversiones.activos.modelo.Moneda;
+import com.personal.inversiones.activos.modelo.TipoActivo;
+import com.personal.inversiones.activos.repositorio.ActivoRepositorio;
+import com.personal.inversiones.compartido.PruebaIntegracion;
+import com.personal.inversiones.transacciones.modelo.Transaccion;
+import com.personal.inversiones.transacciones.repositorio.TransaccionRepositorio;
+
+class TransaccionControladorIntegracionTest extends PruebaIntegracion {
+
+	private static final String RUTA = "/api/v1/transacciones";
+
+	@Autowired
+	private MockMvc mockMvc;
+
+	@Autowired
+	private ActivoRepositorio activoRepositorio;
+
+	@Autowired
+	private TransaccionRepositorio transaccionRepositorio;
+
+	@Autowired
+	private Clock clock;
+
+	private Long ivv;
+
+	@BeforeEach
+	void crearActivo() {
+		ivv = activoRepositorio.save(new Activo("IVV", "iShares Core S&P 500 ETF", TipoActivo.ETF, Moneda.USD))
+				.getId();
+	}
+
+	// --- Cálculos ---
+
+	@Test
+	void registrarCompraCalculaMontoBrutoYEfectivoNeto() throws Exception {
+		registrar("""
+				{"activoId": %d, "tipoTransaccion": "COMPRA", "fechaTransaccion": "2026-10-22",
+				 "cantidad": 0.14553, "precioUnitario": 769.57, "comision": 0.15, "comentario": "  Compra IVV  "}
+				""".formatted(ivv))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.id").isNumber())
+				.andExpect(jsonPath("$.activoId").value(ivv))
+				.andExpect(jsonPath("$.simbolo").value("IVV"))
+				.andExpect(jsonPath("$.nombreActivo").value("iShares Core S&P 500 ETF"))
+				.andExpect(jsonPath("$.tipoTransaccion").value("COMPRA"))
+				.andExpect(jsonPath("$.fechaTransaccion").value("2026-10-22"))
+				.andExpect(jsonPath("$.cantidad").value(0.14553))
+				.andExpect(jsonPath("$.precioUnitario").value(769.57))
+				.andExpect(jsonPath("$.montoBruto").value(112.0))
+				.andExpect(jsonPath("$.comision").value(0.15))
+				.andExpect(jsonPath("$.efectivoNeto").value(-112.15))
+				.andExpect(jsonPath("$.comentario").value("Compra IVV"))
+				.andExpect(jsonPath("$.fechaCreacion").doesNotExist())
+				.andExpect(jsonPath("$.fechaActualizacion").doesNotExist());
+
+		Transaccion guardada = transaccionRepositorio.findAll().getFirst();
+		assertThat(guardada.getMontoBruto()).isEqualByComparingTo("112.00");
+		assertThat(guardada.getComentario()).isEqualTo("Compra IVV");
+	}
+
+	@Test
+	void registrarDevuelveLasEscalasDelContrato() throws Exception {
+		registrar(compra("0.14553", "769.57", "0.15"))
+				.andExpect(status().isCreated())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"cantidad\":0.14553000", "\"precioUnitario\":769.57",
+								"\"montoBruto\":112.00", "\"comision\":0.15", "\"efectivoNeto\":-112.15"));
+	}
+
+	@Test
+	void registrarConservaLosDecimalesDelPrecio() throws Exception {
+		registrar(compra("1", "81990.123456", "0"))
+				.andExpect(status().isCreated())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"precioUnitario\":81990.123456", "\"montoBruto\":81990.12"));
+	}
+
+	@Test
+	void registrarDevuelvePrecioEnteroConDosDecimales() throws Exception {
+		registrar(compra("0.00012254", "81606", "0.10"))
+				.andExpect(status().isCreated())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"precioUnitario\":81606.00", "\"montoBruto\":10.00", "\"efectivoNeto\":-10.10"));
+	}
+
+	@Test
+	void montoBrutoRedondeaLaMitadHaciaArriba() throws Exception {
+		// 0.5 × 0.01 = 0.005 → 0.01. Debe coincidir con ck_transaccion_monto_bruto (ROUND de PostgreSQL).
+		registrar(compra("0.5", "0.01", "0"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.montoBruto").value(0.01));
+	}
+
+	@Test
+	void registrarIgnoraMontoBrutoYEfectivoNetoEnviados() throws Exception {
+		registrar("""
+				{"activoId": %d, "tipoTransaccion": "COMPRA", "fechaTransaccion": "2026-10-22",
+				 "cantidad": 0.14553, "precioUnitario": 769.57, "comision": 0.15,
+				 "montoBruto": 999.99, "efectivoNeto": 5.00}
+				""".formatted(ivv))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.montoBruto").value(112.0))
+				.andExpect(jsonPath("$.efectivoNeto").value(-112.15));
+
+		assertThat(transaccionRepositorio.findAll().getFirst().getMontoBruto()).isEqualByComparingTo("112.00");
+	}
+
+	// --- Validaciones de campos ---
+
+	@Test
+	void registrarConCantidadOPrecioCeroONegativoDevuelve400() throws Exception {
+		for (String valor : new String[] { "0", "-1" }) {
+			registrar(compra(valor, "100", "0"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+					.andExpect(jsonPath("$.erroresCampos[0].campo").value("cantidad"))
+					.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("Debe ser mayor que cero."));
+			registrar(compra("1", valor, "0"))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.erroresCampos[0].campo").value("precioUnitario"))
+					.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("Debe ser mayor que cero."));
+		}
+		assertThat(transaccionRepositorio.count()).isZero();
+	}
+
+	@Test
+	void registrarConComisionNegativaDevuelve400() throws Exception {
+		registrar(compra("1", "100", "-0.01"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("comision"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("No puede ser negativo."));
+	}
+
+	@Test
+	void registrarConComisionCeroEsValido() throws Exception {
+		registrar(compra("1", "100", "0"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.comision").value(0.0))
+				.andExpect(jsonPath("$.efectivoNeto").value(-100.0));
+	}
+
+	@Test
+	void registrarConExcesoDeDecimalesDevuelve400() throws Exception {
+		registrar(compra("0.123456789", "100.1234567", "0.151"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.erroresCampos.length()").value(3))
+				.andExpect(jsonPath("$.erroresCampos[*].campo")
+						.value(containsInAnyOrder("cantidad", "precioUnitario", "comision")));
+		assertThat(transaccionRepositorio.count()).isZero();
+	}
+
+	@Test
+	void registrarConElMaximoDeDecimalesEsValido() throws Exception {
+		registrar(compra("0.12345678", "100.123456", "0.15")).andExpect(status().isCreated());
+	}
+
+	@Test
+	void registrarConExcesoDeDigitosEnterosDevuelve400() throws Exception {
+		registrar(compra("12345678901234567", "1", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("cantidad"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje")
+						.value("Admite como máximo 8 decimales y 16 dígitos enteros."));
+	}
+
+	@Test
+	void registrarConFechaDeHoyEsValido() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", LocalDate.now(clock).toString(), "1", "100", "0"))
+				.andExpect(status().isCreated());
+	}
+
+	@Test
+	void registrarConFechaFuturaDevuelve400() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", LocalDate.now(clock).plusDays(1).toString(), "1", "100", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("fechaTransaccion"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("No puede ser una fecha futura."));
+		assertThat(transaccionRepositorio.count()).isZero();
+	}
+
+	@Test
+	void registrarSinCamposObligatoriosDevuelve400() throws Exception {
+		registrar("{}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos.length()").value(6))
+				.andExpect(jsonPath("$.erroresCampos[*].campo").value(containsInAnyOrder("activoId",
+						"tipoTransaccion", "fechaTransaccion", "cantidad", "precioUnitario", "comision")))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("Es obligatorio."));
+	}
+
+	@Test
+	void registrarConTipoInvalidoDevuelve400() throws Exception {
+		registrar(transaccion(ivv, "CANJE", "2026-10-22", "1", "100", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("tipoTransaccion"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje")
+						.value("Valor no permitido. Valores válidos: COMPRA, VENTA."));
+	}
+
+	@Test
+	void registrarConActivoInexistenteDevuelve404() throws Exception {
+		registrar(transaccion(999L, "COMPRA", "2026-10-22", "1", "100", "0"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("ACTIVO_NO_ENCONTRADO"));
+		assertThat(transaccionRepositorio.count()).isZero();
+	}
+
+	@Test
+	void registrarConComentarioDe501CaracteresDevuelve400() throws Exception {
+		registrar(compraConComentario("\"" + "C".repeat(501) + "\""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("comentario"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("Admite como máximo 500 caracteres."));
+	}
+
+	@Test
+	void registrarConComentarioDe500CaracteresEsValido() throws Exception {
+		registrar(compraConComentario("\"" + "C".repeat(500) + "\"")).andExpect(status().isCreated());
+	}
+
+	@Test
+	void registrarGuardaComentarioVacioComoNull() throws Exception {
+		registrar(compraConComentario("\"   \""))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.comentario").doesNotExist());
+		assertThat(transaccionRepositorio.findAll().getFirst().getComentario()).isNull();
+	}
+
+	// --- Bloqueo del símbolo del activo (01-modelo-funcional §2.4) ---
+
+	@Test
+	void activoSinTransaccionesPermiteCambiarElSimbolo() throws Exception {
+		mockMvc.perform(get("/api/v1/activos/" + ivv))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simboloEditable").value(true));
+		actualizarActivo("IVVX", "ETF")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simbolo").value("IVVX"));
+	}
+
+	@Test
+	void activoConTransaccionesBloqueaElSimbolo() throws Exception {
+		registrar(compra("1", "100", "0")).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/v1/activos/" + ivv))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simboloEditable").value(false));
+		actualizarActivo("IVVX", "ETF")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("SIMBOLO_BLOQUEADO"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("simbolo"));
+
+		assertThat(activoRepositorio.findById(ivv).orElseThrow().getSimbolo()).isEqualTo("IVV");
+	}
+
+	@Test
+	void activoConTransaccionesPermiteCambiarElTipo() throws Exception {
+		registrar(compra("1", "100", "0")).andExpect(status().isCreated());
+
+		actualizarActivo("IVV", "ACCION")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simbolo").value("IVV"))
+				.andExpect(jsonPath("$.tipoActivo").value("ACCION"));
+	}
+
+	// --- Ventas (SPEC 003 §3.2 y §3.3) ---
+
+	@Test
+	void ventaTotalEsValidaYCalculaElEfectivoRecibido() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0.15")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "1.0", "110", "0.15"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.tipoTransaccion").value("VENTA"))
+				.andExpect(jsonPath("$.montoBruto").value(110.0))
+				.andExpect(jsonPath("$.efectivoNeto").value(109.85));
+
+		consultarDisponible(ivv, "2026-10-12").andExpect(jsonPath("$.cantidadDisponible").value(0.0));
+	}
+
+	@Test
+	void ventaParcialEsValida() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.25", "110", "0")).andExpect(status().isCreated());
+
+		consultarDisponible(ivv, "2026-10-12").andExpect(jsonPath("$.cantidadDisponible").value(0.75));
+	}
+
+	@Test
+	void ventaRetroactivaQueRompeUnSaldoFuturoDevuelve409() throws Exception {
+		escenarioCompraYVenta();
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-15", "0.5", "105", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"))
+				.andExpect(jsonPath("$.mensaje")
+						.value("La cantidad supera la disponible para vender en esa fecha (0.40000000 IVV)."))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("cantidad"));
+		assertThat(transaccionRepositorio.count()).isEqualTo(2);
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-15", "0.4", "105", "0")).andExpect(status().isCreated());
+		consultarDisponible(ivv, "2026-10-25").andExpect(jsonPath("$.cantidadDisponible").value(0.0));
+	}
+
+	@Test
+	void ventaSinComprasPreviasDevuelve409() throws Exception {
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.1", "100", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"))
+				.andExpect(jsonPath("$.mensaje")
+						.value("La cantidad supera la disponible para vender en esa fecha (0.00000000 IVV)."));
+		assertThat(transaccionRepositorio.count()).isZero();
+	}
+
+	@Test
+	void ventaAnteriorALaCompraDevuelve409() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-09", "0.1", "100", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"));
+	}
+
+	@Test
+	void compraYVentaDelMismoDiaPorLaMismaCantidadEsValida() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-10", "1.0", "101", "0")).andExpect(status().isCreated());
+	}
+
+	@Test
+	void ventaNoUsaLaCantidadDeOtroActivo() throws Exception {
+		Long vxus = activoRepositorio.save(new Activo("VXUS", "Vanguard Total International Stock ETF",
+				TipoActivo.ETF, Moneda.USD)).getId();
+		registrar(compra("1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(vxus, "VENTA", "2026-10-22", "0.1", "80", "0"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.mensaje")
+						.value("La cantidad supera la disponible para vender en esa fecha (0.00000000 VXUS)."));
+	}
+
+	@Test
+	void ventaConComisionMayorAlMontoBrutoDevuelve400() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		// 0.001 × 100 = 0.10 de monto bruto.
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.001", "100", "0.11"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("comision"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje")
+						.value("No puede ser mayor que el monto bruto de la venta."));
+		assertThat(transaccionRepositorio.count()).isEqualTo(1);
+	}
+
+	@Test
+	void ventaConComisionIgualAlMontoBrutoEsValida() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+
+		registrar(transaccion(ivv, "VENTA", "2026-10-12", "0.001", "100", "0.10"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.efectivoNeto").value(0.0));
+	}
+
+	@Test
+	void compraConComisionMayorAlMontoBrutoEsValida() throws Exception {
+		registrar(compra("0.001", "100", "0.15"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.montoBruto").value(0.1))
+				.andExpect(jsonPath("$.efectivoNeto").value(-0.25));
+	}
+
+	@Test
+	void ventaConDatosInvalidosResponde400AntesQue409() throws Exception {
+		registrar(transaccion(ivv, "VENTA", LocalDate.now(clock).plusDays(1).toString(), "1", "100", "0"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("fechaTransaccion"));
+	}
+
+	@Test
+	void ventaConActivoInexistenteDevuelve404() throws Exception {
+		registrar(transaccion(999L, "VENTA", "2026-10-12", "1", "100", "0"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("ACTIVO_NO_ENCONTRADO"));
+	}
+
+	/**
+	 * Dos ventas simultáneas de 0.6 con un saldo de 1.0: el bloqueo de la fila del activo hace que se
+	 * validen una tras otra, así que solo una se registra.
+	 */
+	@Test
+	void ventasSimultaneasNoSuperanElDisponible() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+		String venta = transaccion(ivv, "VENTA", "2026-10-12", "0.6", "110", "0");
+
+		ExecutorService ejecutor = Executors.newFixedThreadPool(2);
+		CountDownLatch salida = new CountDownLatch(1);
+		try {
+			List<Future<Integer>> resultados = new ArrayList<>();
+			for (int i = 0; i < 2; i++) {
+				resultados.add(ejecutor.submit(() -> {
+					salida.await();
+					return registrar(venta).andReturn().getResponse().getStatus();
+				}));
+			}
+			salida.countDown();
+			List<Integer> estados = new ArrayList<>();
+			for (Future<Integer> resultado : resultados) {
+				estados.add(resultado.get(30, TimeUnit.SECONDS));
+			}
+			assertThat(estados).containsExactlyInAnyOrder(201, 409);
+		} finally {
+			ejecutor.shutdownNow();
+		}
+		consultarDisponible(ivv, "2026-10-12").andExpect(jsonPath("$.cantidadDisponible").value(0.4));
+	}
+
+	// --- Consultar (SPEC 003 §3.6) ---
+
+	/**
+	 * c1: IVV COMPRA 10/10 1.0 × 100 (0.15) → 100.00
+	 * v1: IVV VENTA 20/10 0.5 × 110 (0.20) → 55.00
+	 * x1: VXUS COMPRA 15/10 2 × 50 (0.10) → 100.00
+	 * c2: IVV COMPRA 20/10 0.5 × 120 (0.15) → 60.00, misma fecha que v1 pero registrada después.
+	 */
+	private record Historial(Long vxus, Long c1, Long v1, Long x1, Long c2) {
+	}
+
+	private Historial registrarHistorial() throws Exception {
+		Long vxus = activoRepositorio.save(new Activo("VXUS", "Vanguard Total International Stock ETF",
+				TipoActivo.ETF, Moneda.USD)).getId();
+		Long c1 = idRegistrado(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0.15"));
+		Long v1 = idRegistrado(transaccion(ivv, "VENTA", "2026-10-20", "0.5", "110", "0.20"));
+		Long x1 = idRegistrado(transaccion(vxus, "COMPRA", "2026-10-15", "2", "50", "0.10"));
+		Long c2 = idRegistrado(transaccion(ivv, "COMPRA", "2026-10-20", "0.5", "120", "0.15"));
+		return new Historial(vxus, c1, v1, x1, c2);
+	}
+
+	@Test
+	void listarOrdenaPorFechaEIdDescendentesYCalculaTotales() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones.length()").value(4))
+				.andExpect(jsonPath("$.transacciones[0].id").value(h.c2()))
+				.andExpect(jsonPath("$.transacciones[1].id").value(h.v1()))
+				.andExpect(jsonPath("$.transacciones[2].id").value(h.x1()))
+				.andExpect(jsonPath("$.transacciones[3].id").value(h.c1()))
+				.andExpect(jsonPath("$.transacciones[1].simbolo").value("IVV"))
+				.andExpect(jsonPath("$.transacciones[1].efectivoNeto").value(54.8))
+				.andExpect(jsonPath("$.transacciones[2].simbolo").value("VXUS"))
+				.andExpect(jsonPath("$.totalComprado").value(260.0))
+				.andExpect(jsonPath("$.totalVendido").value(55.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.6))
+				.andExpect(jsonPath("$.conteoCompras").value(3))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarFiltraPorActivo() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("activoId", ivv.toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones[*].id").value(contains(
+						h.c2().intValue(), h.v1().intValue(), h.c1().intValue())))
+				.andExpect(jsonPath("$.totalComprado").value(160.0))
+				.andExpect(jsonPath("$.totalVendido").value(55.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.5))
+				.andExpect(jsonPath("$.conteoCompras").value(2))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarConActivoYTipoCalculaTotalesFiltradosYConteosSoloPorActivo() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("activoId", ivv.toString()).param("tipo", "COMPRA"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones[*].id").value(contains(h.c2().intValue(), h.c1().intValue())))
+				.andExpect(jsonPath("$.totalComprado").value(160.0))
+				.andExpect(jsonPath("$.totalVendido").value(0.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.3))
+				// Los conteos ignoran el filtro de tipo: alimentan las pestañas Todas / Compras / Ventas.
+				.andExpect(jsonPath("$.conteoCompras").value(2))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarFiltraPorTipo() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("tipo", "VENTA"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones[*].id").value(contains(h.v1().intValue())))
+				.andExpect(jsonPath("$.totalComprado").value(0.0))
+				.andExpect(jsonPath("$.totalVendido").value(55.0))
+				.andExpect(jsonPath("$.totalComisiones").value(0.2))
+				.andExpect(jsonPath("$.conteoCompras").value(3))
+				.andExpect(jsonPath("$.conteoVentas").value(1));
+	}
+
+	@Test
+	void listarSinTransaccionesDevuelveListaVaciaYCeros() throws Exception {
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones.length()").value(0))
+				.andExpect(jsonPath("$.conteoCompras").value(0))
+				.andExpect(jsonPath("$.conteoVentas").value(0))
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"totalComprado\":0.00", "\"totalVendido\":0.00", "\"totalComisiones\":0.00"));
+	}
+
+	@Test
+	void listarConActivoInexistenteDevuelveListaVacia() throws Exception {
+		registrarHistorial();
+
+		mockMvc.perform(get(RUTA).param("activoId", "999"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones.length()").value(0))
+				.andExpect(jsonPath("$.totalComprado").value(0.0))
+				.andExpect(jsonPath("$.conteoCompras").value(0));
+	}
+
+	@Test
+	void listarConTipoInvalidoDevuelve400() throws Exception {
+		mockMvc.perform(get(RUTA).param("tipo", "OTRO"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("tipo"));
+	}
+
+	@Test
+	void obtenerDevuelveLaTransaccion() throws Exception {
+		Historial h = registrarHistorial();
+
+		mockMvc.perform(get(RUTA + "/" + h.v1()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(h.v1()))
+				.andExpect(jsonPath("$.activoId").value(ivv))
+				.andExpect(jsonPath("$.simbolo").value("IVV"))
+				.andExpect(jsonPath("$.nombreActivo").value("iShares Core S&P 500 ETF"))
+				.andExpect(jsonPath("$.tipoTransaccion").value("VENTA"))
+				.andExpect(jsonPath("$.fechaTransaccion").value("2026-10-20"))
+				.andExpect(jsonPath("$.cantidad").value(0.5))
+				.andExpect(jsonPath("$.precioUnitario").value(110.0))
+				.andExpect(jsonPath("$.montoBruto").value(55.0))
+				.andExpect(jsonPath("$.comision").value(0.2))
+				.andExpect(jsonPath("$.efectivoNeto").value(54.8))
+				.andExpect(jsonPath("$.fechaCreacion").doesNotExist())
+				.andExpect(jsonPath("$.fechaActualizacion").doesNotExist());
+	}
+
+	@Test
+	void obtenerInexistenteDevuelve404() throws Exception {
+		mockMvc.perform(get(RUTA + "/999"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("TRANSACCION_NO_ENCONTRADA"))
+				.andExpect(jsonPath("$.ruta").value(RUTA + "/999"));
+	}
+
+	@Test
+	void editarOEliminarNoEstanPermitidos() throws Exception {
+		Long id = idRegistrado(compra("1", "100", "0"));
+
+		mockMvc.perform(put(RUTA + "/" + id).contentType(MediaType.APPLICATION_JSON).content(compra("2", "100", "0")))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+		mockMvc.perform(delete(RUTA + "/" + id))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+
+		assertThat(transaccionRepositorio.count()).isEqualTo(1);
+	}
+
+	// --- Cantidad disponible (SPEC 003 §3.3) ---
+
+	@Test
+	void disponibleAplicaLaReglaCronologica() throws Exception {
+		escenarioCompraYVenta();
+
+		consultarDisponible(ivv, "2026-10-15")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.activoId").value(ivv))
+				.andExpect(jsonPath("$.fecha").value("2026-10-15"))
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"cantidadDisponible\":0.40000000"));
+	}
+
+	@Test
+	void disponibleSinMovimientosPosterioresEsElSaldoDeEsaFecha() throws Exception {
+		escenarioCompraYVenta();
+
+		consultarDisponible(ivv, "2026-10-25")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.cantidadDisponible").value(0.4));
+	}
+
+	@Test
+	void disponibleAntesDeTodaCompraEsCero() throws Exception {
+		escenarioCompraYVenta();
+
+		consultarDisponible(ivv, "2026-10-05")
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"cantidadDisponible\":0.00000000"));
+	}
+
+	@Test
+	void lasCantidadesPequenasNoUsanNotacionCientifica() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-22", "0.00000099", "81606", "0"))
+				.andExpect(status().isCreated())
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"cantidad\":0.00000099"));
+	}
+
+	@Test
+	void disponibleSinFechaUsaHoy() throws Exception {
+		escenarioCompraYVenta();
+
+		mockMvc.perform(get(RUTA + "/disponible").param("activoId", ivv.toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.fecha").value(LocalDate.now(clock).toString()))
+				.andExpect(jsonPath("$.cantidadDisponible").value(0.4));
+	}
+
+	@Test
+	void disponibleSoloConsideraElActivoConsultado() throws Exception {
+		Long vxus = activoRepositorio.save(new Activo("VXUS", "Vanguard Total International Stock ETF",
+				TipoActivo.ETF, Moneda.USD)).getId();
+		registrar(compra("1.0", "100", "0")).andExpect(status().isCreated());
+		registrar(transaccion(vxus, "COMPRA", "2026-10-22", "5", "80", "0")).andExpect(status().isCreated());
+
+		consultarDisponible(vxus, "2026-10-22")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.cantidadDisponible").value(5.0));
+	}
+
+	@Test
+	void disponibleConActivoInexistenteDevuelve404() throws Exception {
+		consultarDisponible(999L, "2026-10-15")
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("ACTIVO_NO_ENCONTRADO"));
+	}
+
+	@Test
+	void disponibleSinActivoDevuelve400() throws Exception {
+		mockMvc.perform(get(RUTA + "/disponible"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("activoId"))
+				.andExpect(jsonPath("$.erroresCampos[0].mensaje").value("Es obligatorio."));
+	}
+
+	@Test
+	void disponibleConFechaMalFormadaDevuelve400() throws Exception {
+		consultarDisponible(ivv, "15/10/2026")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("fecha"));
+	}
+
+	// --- Utilidades ---
+
+	/** Compra 1.0 el 10/10 y venta 0.6 el 20/10 (ejemplo de SPEC 003 §3.3). */
+	private void escenarioCompraYVenta() throws Exception {
+		registrar(transaccion(ivv, "COMPRA", "2026-10-10", "1.0", "100", "0")).andExpect(status().isCreated());
+		registrar(transaccion(ivv, "VENTA", "2026-10-20", "0.6", "110", "0")).andExpect(status().isCreated());
+	}
+
+	private ResultActions consultarDisponible(Long activoId, String fecha) throws Exception {
+		return mockMvc.perform(get(RUTA + "/disponible").param("activoId", activoId.toString()).param("fecha", fecha));
+	}
+
+	private ResultActions actualizarActivo(String simbolo, String tipoActivo) throws Exception {
+		return mockMvc.perform(put("/api/v1/activos/" + ivv).contentType(MediaType.APPLICATION_JSON).content("""
+				{"simbolo": "%s", "nombre": "iShares Core S&P 500 ETF", "tipoActivo": "%s", "moneda": "USD"}
+				""".formatted(simbolo, tipoActivo)));
+	}
+
+	private Long idRegistrado(String json) throws Exception {
+		String cuerpo = registrar(json).andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		return Long.valueOf(JsonPath.read(cuerpo, "$.id").toString());
+	}
+
+	private ResultActions registrar(String json) throws Exception {
+		return mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(json));
+	}
+
+	private String compra(String cantidad, String precio, String comision) {
+		return transaccion(ivv, "COMPRA", "2026-10-22", cantidad, precio, comision);
+	}
+
+	private String compraConComentario(String comentarioJson) {
+		return """
+				{"activoId": %d, "tipoTransaccion": "COMPRA", "fechaTransaccion": "2026-10-22",
+				 "cantidad": 1, "precioUnitario": 100, "comision": 0, "comentario": %s}
+				""".formatted(ivv, comentarioJson);
+	}
+
+	private static String transaccion(Long activoId, String tipo, String fecha, String cantidad, String precio,
+			String comision) {
+		return """
+				{"activoId": %d, "tipoTransaccion": "%s", "fechaTransaccion": "%s",
+				 "cantidad": %s, "precioUnitario": %s, "comision": %s}
+				""".formatted(activoId, tipo, fecha, cantidad, precio, comision);
+	}
+
+}

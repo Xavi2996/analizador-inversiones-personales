@@ -14,6 +14,7 @@ describe('LayoutComponent', () => {
         provideRouter([
           { path: 'activos', component: PantallaPrueba },
           { path: 'aportes', component: PantallaPrueba },
+          { path: 'transacciones', component: PantallaPrueba },
         ]),
       ],
     }).compileComponents();
@@ -27,14 +28,16 @@ describe('LayoutComponent', () => {
     return { fixture, elemento: fixture.nativeElement as HTMLElement };
   }
 
-  it('muestra las entradas Activos y Aportes en la navegación lateral', async () => {
+  it('muestra las entradas Activos, Aportes y Transacciones en la navegación lateral', async () => {
     const { elemento } = await crear();
     const enlaces = elemento.querySelectorAll('.lateral-nav a');
-    expect(enlaces.length).toBe(2);
+    expect(enlaces.length).toBe(3);
     expect(enlaces[0].textContent?.trim()).toBe('Activos');
     expect(enlaces[0].getAttribute('href')).toBe('/activos');
     expect(enlaces[1].textContent?.trim()).toBe('Aportes');
     expect(enlaces[1].getAttribute('href')).toBe('/aportes');
+    expect(enlaces[2].textContent?.trim()).toBe('Transacciones');
+    expect(enlaces[2].getAttribute('href')).toBe('/transacciones');
   });
 
   it('marca como actual la pantalla activa', async () => {

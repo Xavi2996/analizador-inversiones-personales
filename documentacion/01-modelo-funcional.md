@@ -162,6 +162,10 @@ El monto bruto se calcula como:
 
 cantidad × precio unitario
 
+redondeado a 2 decimales (mitad hacia arriba).
+
+El monto bruto no se ingresa: lo calcula el sistema. Con este redondeo coincide con el importe real del intermediario en los registros del Excel de referencia.
+
 ---
 
 ## 4.4 Compra
@@ -194,12 +198,45 @@ monto bruto - comisión
 
 ---
 
-## 4.6 Reglas
+## 4.6 Efectivo neto
 
+Cada transacción tiene un efectivo neto con signo, calculado por el sistema:
+
+- compra: −(monto bruto + comisión);
+- venta: monto bruto − comisión.
+
+La suma de los efectivos netos es el aporte de las transacciones al efectivo disponible (sección 11).
+
+---
+
+## 4.7 Cantidad disponible para vender
+
+El saldo de un activo al cierre de una fecha D es la cantidad comprada menos la cantidad vendida con fecha menor o igual a D.
+
+Las transacciones de un mismo día cuentan como simultáneas.
+
+La cantidad disponible para vender en la fecha D es el menor valor entre:
+
+- el saldo en D;
+- el saldo en cada fecha posterior a D que tenga movimientos del activo.
+
+Una venta en la fecha D no puede superar esa cantidad. Así ninguna venta, aunque se registre con fecha pasada, deja el saldo negativo en ninguna fecha.
+
+Cuando existan referidos, la cantidad referida se suma al saldo.
+
+---
+
+## 4.8 Reglas
+
+- La fecha no puede ser posterior a la fecha actual de negocio (ver sección 17).
 - La cantidad debe ser mayor que cero.
 - El precio debe ser mayor que cero.
-- La comisión no puede ser negativa.
-- La validación de ventas contra la cantidad disponible se definirá en la especificación de Transacciones.
+- La comisión no puede ser negativa y es obligatoria (puede ser cero).
+- En una venta, la comisión no puede superar el monto bruto.
+- Una venta no puede superar la cantidad disponible para vender (sección 4.7).
+- Una compra no se valida contra el efectivo disponible.
+- El tipo del activo no se guarda en la transacción; se obtiene del activo.
+- En el MVP una transacción no se edita ni se elimina. La corrección de movimientos históricos se definirá en su propia especificación.
 - Las posiciones deben derivarse de las transacciones.
 - Una transacción histórica no debe alterar automáticamente otras operaciones.
 
@@ -432,16 +469,36 @@ Inicialmente se utilizará para las compras existentes.
 
 ---
 
-## 10.2 Consideración sobre ventas
+## 10.2 Método de costo con ventas
 
-Cuando se incorporen ventas, el cálculo deberá utilizar un criterio definido y consistente.
+El MVP utiliza **costo promedio ponderado móvil**.
 
-Antes de implementar ventas con ganancia realizada se deberá especificar claramente el método utilizado.
+Se recorren las transacciones del activo en orden de fecha. En una misma fecha, primero las compras y después las ventas.
 
-Ejemplos posibles:
+```text
+Inicio:  cantidad = 0, costo base = 0
 
-- costo promedio,
-- FIFO.
+Compra:  costo base += monto bruto + comisión
+         cantidad   += cantidad comprada
+
+Venta:   costo promedio = costo base / cantidad
+         costo vendido  = cantidad vendida × costo promedio
+         costo base    -= costo vendido
+         cantidad      -= cantidad vendida
+         (si la cantidad llega a 0, el costo base es 0)
+
+costo promedio actual = costo base / cantidad   (0 si la cantidad es 0)
+```
+
+- Una venta no cambia el costo promedio; reduce el costo base por el costo de lo vendido.
+- Una compra posterior recalcula el promedio sobre la cantidad remanente más la comprada.
+- No se redondea en pasos intermedios.
+
+Ejemplo: compra 1 a $100, venta de 1, compra 1 a $200. El costo promedio es $200, no $150.
+
+La fórmula del Excel de referencia (todas las compras entre toda la cantidad comprada) coincide con este método mientras no existan compras posteriores a una venta.
+
+La ganancia realizada y el tratamiento de los referidos en el costo base se definirán en la especificación de Posiciones.
 
 El MVP no deberá asumir silenciosamente un método distinto al documentado.
 

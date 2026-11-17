@@ -246,12 +246,13 @@ transaccion
 
 ## Campos
 
-- id BIGINT
+- id BIGINT GENERATED ALWAYS AS IDENTITY
 - activo_id BIGINT NOT NULL
 - tipo_transaccion VARCHAR(20) NOT NULL
 - fecha_transaccion DATE NOT NULL
 - cantidad NUMERIC(28,12) NOT NULL
 - precio_unitario NUMERIC(19,6) NOT NULL
+- monto_bruto NUMERIC(19,6) NOT NULL
 - comision NUMERIC(19,6) NOT NULL DEFAULT 0
 - comentario TEXT
 - fecha_creacion TIMESTAMPTZ NOT NULL
@@ -259,7 +260,7 @@ transaccion
 
 ## Relación
 
-activo_id
+fk_transaccion_activo: activo_id
 → activo.id
 
 ## Valores de tipo_transaccion
@@ -267,17 +268,27 @@ activo_id
 - COMPRA
 - VENTA
 
+## Restricciones
+
+- PRIMARY KEY(id)
+- ck_transaccion_tipo: tipo_transaccion IN ('COMPRA', 'VENTA')
+- ck_transaccion_cantidad: cantidad > 0
+- ck_transaccion_precio: precio_unitario > 0
+- ck_transaccion_comision: comision >= 0
+- ck_transaccion_monto_bruto: monto_bruto = ROUND(cantidad * precio_unitario, 2)
+
 ## Reglas
 
-- cantidad > 0
-- precio_unitario > 0
-- comision >= 0
+- `monto_bruto` lo calcula el backend y se guarda para conservar el hecho histórico.
+- El efectivo neto no se guarda; se calcula al consultar.
+- El tipo de activo no se guarda; se obtiene de `activo`.
+- La aplicación limita la entrada a 8 decimales en `cantidad`, 6 en `precio_unitario` y 2 en `comision`.
+- `comentario` es opcional. La aplicación limita su longitud a 500 caracteres y guarda vacío como NULL.
 
-## Índices sugeridos
+## Índices
 
-- activo_id
-- fecha_transaccion
-- activo_id + fecha_transaccion
+- ix_transaccion_activo_fecha: activo_id + fecha_transaccion (cubre también las búsquedas por activo_id)
+- ix_transaccion_fecha: fecha_transaccion
 
 ---
 

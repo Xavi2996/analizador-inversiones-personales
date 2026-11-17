@@ -1,0 +1,239 @@
+<ng-template #icono let-tipo="tipo">
+  @if (tipo === 'COMPRA') {
+    <span class="icono-tipo icono-compra" aria-hidden="true">+</span>
+  } @else {
+    <span class="icono-tipo icono-venta" aria-hidden="true">−</span>
+  }
+</ng-template>
+
+<div class="pagina">
+  <header class="encabezado">
+    <div>
+      <div class="sobretitulo">Registro</div>
+      <h1>Transacciones</h1>
+      <p class="descripcion">Compras y ventas de activos. Las posiciones se calculan a partir de este historial.</p>
+    </div>
+    @if (lista() !== null && !sinTransacciones()) {
+      <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Registrar transacción
+      </button>
+    }
+  </header>
+
+  @if (lista(); as datos) {
+    @if (sinTransacciones()) {
+      <div class="vacio">
+        <p>No existen transacciones registradas.</p>
+        <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+          Registrar primera transacción
+        </button>
+      </div>
+    } @else {
+      <section class="historial" aria-label="Historial de transacciones">
+        <div class="filtros">
+          <div role="tablist" aria-label="Filtrar por tipo" class="pestanas">
+            @for (pestana of pestanas; track pestana.etiqueta; let i = $index) {
+              <button
+                type="button"
+                role="tab"
+                class="pestana"
+                [id]="'tx-tab-' + i"
+                aria-controls="tx-panel"
+                [attr.aria-selected]="tipo() === pestana.tipo"
+                [attr.tabindex]="tipo() === pestana.tipo ? 0 : -1"
+                (click)="seleccionarTipo(pestana.tipo)"
+                (keydown)="moverPestana($event, i)"
+              >
+                {{ pestana.etiqueta }} <span class="conteo">{{ conteo(pestana.tipo, datos) }}</span>
+              </button>
+            }
+          </div>
+          <select
+            class="selector-activo"
+            aria-label="Filtrar por activo"
+            [value]="activoId() ?? ''"
+            (change)="seleccionarActivo($any($event.target).value)"
+          >
+            <option value="">Todos los activos</option>
+            @for (activo of activos(); track activo.id) {
+              <option [value]="activo.id">{{ activo.simbolo }}</option>
+            }
+          </select>
+        </div>
+
+        <div
+          role="tabpanel"
+          id="tx-panel"
+          [attr.aria-labelledby]="'tx-tab-' + (tipo() === null ? 0 : tipo() === 'COMPRA' ? 1 : 2)"
+          [attr.aria-busy]="estado() === 'cargando'"
+          [class.actualizando]="estado() === 'cargando'"
+        >
+          @if (estado() === 'error') {
+            <div class="mensaje mensaje-error" role="alert">
+              <p>No fue posible cargar las transacciones. Comprueba que el servidor esté disponible e inténtalo de nuevo.</p>
+              <button type="button" class="boton boton-secundario" (click)="cargar()">Reintentar</button>
+            </div>
+          } @else if (datos.transacciones.length === 0) {
+            <p class="mensaje sin-resultados">{{ mensajeSinResultados() }}</p>
+          } @else {
+            <div class="tabla-contenedor" role="region" aria-label="Historial de transacciones" tabindex="0">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Fecha</th>
+                    <th scope="col">Operación</th>
+                    <th scope="col" class="numero">Cantidad</th>
+                    <th scope="col" class="numero">Precio unitario</th>
+                    <th scope="col" class="numero">Comisión</th>
+                    <th scope="col" class="numero">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (transaccion of datos.transacciones; track transaccion.id) {
+                    <tr>
+                      <td class="fecha">{{ fecha(transaccion.fechaTransaccion) }}</td>
+                      <td>
+                        <div class="operacion">
+                          <ng-container *ngTemplateOutlet="icono; context: { tipo: transaccion.tipoTransaccion }" />
+                          <span>
+                            <span class="simbolo">{{ transaccion.simbolo }}</span>
+                            <span class="tipo">{{ transaccion.tipoTransaccion === 'COMPRA' ? 'Compra' : 'Venta' }}</span>
+                          </span>
+                        </div>
+                      </td>
+                      <td class="numero cantidad">{{ transaccion.cantidad | number: '1.8-8' }}</td>
+                      <td class="numero secundario">{{ transaccion.precioUnitario | currency: 'USD' : 'symbol' : '1.2-6' }}</td>
+                      <td class="numero terciario">{{ transaccion.comision | currency: 'USD' }}</td>
+                      <td class="numero destacado">{{ transaccion.montoBruto | currency: 'USD' }}</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  @if (totalesPorTipo()) {
+                    <tr>
+                      <th scope="row" colspan="4">Total compras</th>
+                      <td></td>
+                      <td class="numero total-principal">{{ datos.totalComprado | currency: 'USD' }}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row" colspan="4">Total ventas</th>
+                      <td></td>
+                      <td class="numero total-principal">{{ datos.totalVendido | currency: 'USD' }}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row" colspan="4">Total comisiones</th>
+                      <td class="numero">{{ datos.totalComisiones | currency: 'USD' }}</td>
+                      <td></td>
+                    </tr>
+                  } @else {
+                    <tr>
+                      <th scope="row" colspan="4">{{ tipoTotalUnico() === 'COMPRA' ? 'Total compras' : 'Total ventas' }}</th>
+                      <td class="numero">{{ datos.totalComisiones | currency: 'USD' }}</td>
+                      <td class="numero total-principal">
+                        {{ (tipoTotalUnico() === 'COMPRA' ? datos.totalComprado : datos.totalVendido) | currency: 'USD' }}
+                      </td>
+                    </tr>
+                  }
+                </tfoot>
+              </table>
+            </div>
+
+            <ul class="tarjetas" aria-label="Historial de transacciones">
+              @for (transaccion of datos.transacciones; track transaccion.id) {
+                <li>
+                  <div class="tarjeta-cabecera">
+                    <div class="operacion">
+                      <ng-container *ngTemplateOutlet="icono; context: { tipo: transaccion.tipoTransaccion }" />
+                      <span>
+                        <span class="simbolo">{{ transaccion.simbolo }}</span>
+                        <span class="tipo">
+                          {{ transaccion.tipoTransaccion === 'COMPRA' ? 'Compra' : 'Venta' }} ·
+                          {{ fecha(transaccion.fechaTransaccion) }}
+                        </span>
+                      </span>
+                    </div>
+                    <span class="tarjeta-monto">
+                      <span class="tarjeta-etiqueta">Monto</span>
+                      <span class="destacado">{{ transaccion.montoBruto | currency: 'USD' }}</span>
+                    </span>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Cantidad</dt>
+                      <dd class="cantidad">{{ transaccion.cantidad | number: '1.8-8' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Precio unitario</dt>
+                      <dd>{{ transaccion.precioUnitario | currency: 'USD' : 'symbol' : '1.2-6' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Comisión</dt>
+                      <dd class="terciario">{{ transaccion.comision | currency: 'USD' }}</dd>
+                    </div>
+                  </dl>
+                </li>
+              }
+              @if (totalesPorTipo()) {
+                <li class="tarjeta-total">
+                  <span>Total compras</span>
+                  <span class="total-principal">{{ datos.totalComprado | currency: 'USD' }}</span>
+                </li>
+                <li class="tarjeta-total">
+                  <span>Total ventas</span>
+                  <span class="total-principal">{{ datos.totalVendido | currency: 'USD' }}</span>
+                </li>
+                <li class="tarjeta-total">
+                  <span>Total comisiones</span>
+                  <span class="total-principal">{{ datos.totalComisiones | currency: 'USD' }}</span>
+                </li>
+              } @else {
+                <li class="tarjeta-total">
+                  <span>{{ tipoTotalUnico() === 'COMPRA' ? 'Total compras' : 'Total ventas' }}</span>
+                  <span class="tarjeta-total-valores">
+                    <span class="total-principal">
+                      {{ (tipoTotalUnico() === 'COMPRA' ? datos.totalComprado : datos.totalVendido) | currency: 'USD' }}
+                    </span>
+                    <span class="tarjeta-total-detalle">Comisión {{ datos.totalComisiones | currency: 'USD' }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <div class="leyenda">
+          <span><span class="icono-tipo icono-compra" aria-hidden="true">+</span>Compra · entra al portafolio</span>
+          <span><span class="icono-tipo icono-venta" aria-hidden="true">−</span>Venta · sale del portafolio</span>
+        </div>
+      </section>
+    }
+  } @else {
+    @switch (estado()) {
+      @case ('cargando') {
+        <p class="mensaje" role="status">Cargando transacciones…</p>
+      }
+      @case ('error') {
+        <div class="mensaje mensaje-error" role="alert">
+          <p>No fue posible cargar las transacciones. Comprueba que el servidor esté disponible e inténtalo de nuevo.</p>
+          <button type="button" class="boton boton-secundario" (click)="cargar()">Reintentar</button>
+        </div>
+      }
+    }
+  }
+</div>
+
+@if (formularioAbierto()) {
+  <app-transaccion-form [activos]="activos()" (guardado)="alGuardar($event)" (cerrado)="formularioAbierto.set(false)" />
+}
+
+<div class="aviso-region" role="status" aria-live="polite">
+  @if (aviso(); as mensaje) {
+    <div class="aviso">
+      <span class="aviso-icono" aria-hidden="true">✓</span>
+      {{ mensaje }}
+    </div>
+  }
+</div>

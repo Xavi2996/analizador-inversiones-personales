@@ -1,0 +1,225 @@
+package com.personal.inversiones.transacciones.servicio;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.personal.inversiones.activos.modelo.Activo;
+import com.personal.inversiones.activos.servicio.ActivoServicio;
+import com.personal.inversiones.compartido.error.ConflictoExcepcion;
+import com.personal.inversiones.compartido.error.DatosInvalidosExcepcion;
+import com.personal.inversiones.compartido.error.ErrorCampo;
+import com.personal.inversiones.compartido.error.RecursoNoEncontradoExcepcion;
+import com.personal.inversiones.transacciones.dto.CantidadDisponibleRespuesta;
+import com.personal.inversiones.transacciones.dto.CrearTransaccionSolicitud;
+import com.personal.inversiones.transacciones.dto.ListaTransaccionesRespuesta;
+import com.personal.inversiones.transacciones.dto.TransaccionRespuesta;
+import com.personal.inversiones.transacciones.modelo.TipoTransaccion;
+import com.personal.inversiones.transacciones.modelo.Transaccion;
+import com.personal.inversiones.transacciones.repositorio.TransaccionRepositorio;
+import com.personal.inversiones.transacciones.servicio.CalculoCantidadDisponible.Movimiento;
+
+@Service
+public class TransaccionServicio {
+
+	public static final String CANTIDAD_INSUFICIENTE = "CANTIDAD_INSUFICIENTE";
+	public static final String TRANSACCION_NO_ENCONTRADA = "TRANSACCION_NO_ENCONTRADA";
+
+	/** Montos en USD: se devuelven con 2 decimales. */
+	private static final int ESCALA_MONTO = 2;
+	/** La entrada admite como máximo 8 decimales en la cantidad. */
+	private static final int ESCALA_CANTIDAD = 8;
+	/** El precio se devuelve tal como se guardó, con al menos 2 decimales. */
+	private static final int ESCALA_MINIMA_PRECIO = 2;
+
+	private final TransaccionRepositorio transaccionRepositorio;
+	private final ActivoServicio activoServicio;
+	private final Clock clock;
+
+	public TransaccionServicio(TransaccionRepositorio transaccionRepositorio, ActivoServicio activoServicio,
+			Clock clock) {
+		this.transaccionRepositorio = transaccionRepositorio;
+		this.activoServicio = activoServicio;
+		this.clock = clock;
+	}
+
+	/**
+	 * Orden de validación: datos de la solicitud (400), activo existente (404) y, en ventas,
+	 * cantidad disponible en la fecha (409).
+	 * En una venta la fila del activo queda bloqueada hasta el commit, así dos ventas simultáneas del mismo
+	 * activo se validan una después de la otra (SPEC 003 §3.3).
+	 */
+	@Transactional
+	public TransaccionRespuesta registrar(CrearTransaccionSolicitud solicitud) {
+		BigDecimal montoBruto = calcularMontoBruto(solicitud.cantidad(), solicitud.precioUnitario());
+		validar(solicitud, montoBruto);
+		boolean esVenta = solicitud.tipoTransaccion() == TipoTransaccion.VENTA;
+		Activo activo = esVenta
+				? activoServicio.buscarConBloqueo(solicitud.activoId())
+				: activoServicio.buscar(solicitud.activoId());
+		if (esVenta) {
+			validarCantidadDisponible(activo, solicitud.fechaTransaccion(), solicitud.cantidad());
+		}
+		Transaccion transaccion = new Transaccion(activo, solicitud.tipoTransaccion(), solicitud.fechaTransaccion(),
+				solicitud.cantidad(), solicitud.precioUnitario(), montoBruto, solicitud.comision(),
+				solicitud.comentario());
+		return aRespuesta(transaccionRepositorio.save(transaccion));
+	}
+
+	/**
+	 * Historial por fecha e id descendentes. {@code activoId} y {@code tipo} son opcionales;
+	 * un activo inexistente devuelve una lista vacía. Los conteos ignoran el filtro de tipo.
+	 */
+	@Transactional(readOnly = true)
+	public ListaTransaccionesRespuesta listar(Long activoId, TipoTransaccion tipo) {
+		List<Transaccion> delActivo = activoId == null
+				? transaccionRepositorio.listarConActivo()
+				: transaccionRepositorio.listarConActivoPorActivoId(activoId);
+		long conteoCompras = delActivo.stream().filter(t -> t.getTipoTransaccion() == TipoTransaccion.COMPRA).count();
+		long conteoVentas = delActivo.size() - conteoCompras;
+
+		List<Transaccion> filtradas = tipo == null
+				? delActivo
+				: delActivo.stream().filter(t -> t.getTipoTransaccion() == tipo).toList();
+		return new ListaTransaccionesRespuesta(
+				filtradas.stream().map(this::aRespuesta).toList(),
+				monto(sumarMontoBruto(filtradas, TipoTransaccion.COMPRA)),
+				monto(sumarMontoBruto(filtradas, TipoTransaccion.VENTA)),
+				monto(filtradas.stream().map(Transaccion::getComision).reduce(BigDecimal.ZERO, BigDecimal::add)),
+				conteoCompras,
+				conteoVentas);
+	}
+
+	@Transactional(readOnly = true)
+	public TransaccionRespuesta obtener(Long id) {
+		return transaccionRepositorio.buscarConActivo(id)
+				.map(this::aRespuesta)
+				.orElseThrow(() -> new RecursoNoEncontradoExcepcion(TRANSACCION_NO_ENCONTRADA,
+						"No existe la transacción solicitada."));
+	}
+
+	private static BigDecimal sumarMontoBruto(List<Transaccion> transacciones, TipoTransaccion tipo) {
+		return transacciones.stream()
+				.filter(t -> t.getTipoTransaccion() == tipo)
+				.map(Transaccion::getMontoBruto)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	/**
+	 * Cantidad disponible para vender en {@code fecha} (01-modelo-funcional §4.7); sin fecha, hoy de negocio.
+	 * Es la misma regla que valida las ventas.
+	 */
+	@Transactional(readOnly = true)
+	public CantidadDisponibleRespuesta disponible(Long activoId, LocalDate fecha) {
+		if (activoId == null) {
+			throw new DatosInvalidosExcepcion(List.of(new ErrorCampo("activoId", "Es obligatorio.")));
+		}
+		activoServicio.buscar(activoId);
+		LocalDate fechaConsulta = fecha != null ? fecha : LocalDate.now(clock);
+		return new CantidadDisponibleRespuesta(activoId, fechaConsulta,
+				cantidad(cantidadDisponible(activoId, fechaConsulta)));
+	}
+
+	private BigDecimal cantidadDisponible(Long activoId, LocalDate fecha) {
+		List<Movimiento> movimientos = transaccionRepositorio.findByActivoId(activoId).stream()
+				.map(TransaccionServicio::aMovimiento)
+				.toList();
+		return CalculoCantidadDisponible.calcular(movimientos, fecha);
+	}
+
+	private static Movimiento aMovimiento(Transaccion transaccion) {
+		BigDecimal cantidad = transaccion.getTipoTransaccion() == TipoTransaccion.COMPRA
+				? transaccion.getCantidad()
+				: transaccion.getCantidad().negate();
+		return new Movimiento(transaccion.getFechaTransaccion(), cantidad);
+	}
+
+	/**
+	 * {@code cantidad × precioUnitario} redondeado a 2 decimales {@code HALF_UP}
+	 * (01-modelo-funcional §4.3). Coincide con {@code ck_transaccion_monto_bruto}.
+	 */
+	static BigDecimal calcularMontoBruto(BigDecimal cantidad, BigDecimal precioUnitario) {
+		return cantidad.multiply(precioUnitario).setScale(ESCALA_MONTO, RoundingMode.HALF_UP);
+	}
+
+	/**
+	 * Con signo (01-modelo-funcional §4.6): compra −(monto + comisión); venta monto − comisión.
+	 */
+	static BigDecimal calcularEfectivoNeto(TipoTransaccion tipo, BigDecimal montoBruto, BigDecimal comision) {
+		return tipo == TipoTransaccion.COMPRA
+				? montoBruto.add(comision).negate()
+				: montoBruto.subtract(comision);
+	}
+
+	/**
+	 * Reglas que Bean Validation no cubre: la fecha depende del reloj de negocio (01-modelo-funcional §17)
+	 * y, en una venta, la comisión se compara con el monto bruto calculado (01-modelo-funcional §4.8).
+	 */
+	private void validar(CrearTransaccionSolicitud solicitud, BigDecimal montoBruto) {
+		List<ErrorCampo> errores = new ArrayList<>();
+		if (solicitud.fechaTransaccion().isAfter(LocalDate.now(clock))) {
+			errores.add(new ErrorCampo("fechaTransaccion", "No puede ser una fecha futura."));
+		}
+		if (solicitud.tipoTransaccion() == TipoTransaccion.VENTA && solicitud.comision().compareTo(montoBruto) > 0) {
+			errores.add(new ErrorCampo("comision", "No puede ser mayor que el monto bruto de la venta."));
+		}
+		if (!errores.isEmpty()) {
+			throw new DatosInvalidosExcepcion(errores);
+		}
+	}
+
+	/**
+	 * Una venta no puede superar la cantidad disponible en su fecha (01-modelo-funcional §4.7):
+	 * así no deja el saldo negativo en esa fecha ni en ninguna posterior.
+	 */
+	private void validarCantidadDisponible(Activo activo, LocalDate fecha, BigDecimal cantidadVendida) {
+		BigDecimal disponible = cantidadDisponible(activo.getId(), fecha);
+		if (cantidadVendida.compareTo(disponible) > 0) {
+			throw new ConflictoExcepcion(CANTIDAD_INSUFICIENTE,
+					"La cantidad supera la disponible para vender en esa fecha (%s %s)."
+							.formatted(cantidad(disponible).toPlainString(), activo.getSimbolo()),
+					"cantidad");
+		}
+	}
+
+	private TransaccionRespuesta aRespuesta(Transaccion transaccion) {
+		Activo activo = transaccion.getActivo();
+		return new TransaccionRespuesta(
+				transaccion.getId(),
+				activo.getId(),
+				activo.getSimbolo(),
+				activo.getNombre(),
+				transaccion.getTipoTransaccion(),
+				transaccion.getFechaTransaccion(),
+				cantidad(transaccion.getCantidad()),
+				precio(transaccion.getPrecioUnitario()),
+				monto(transaccion.getMontoBruto()),
+				monto(transaccion.getComision()),
+				monto(calcularEfectivoNeto(transaccion.getTipoTransaccion(), transaccion.getMontoBruto(),
+						transaccion.getComision())),
+				transaccion.getComentario());
+	}
+
+	/** El monto bruto ya está redondeado y la comisión admite 2 decimales: cambiar la escala no redondea. */
+	static BigDecimal monto(BigDecimal valor) {
+		return valor.setScale(ESCALA_MONTO, RoundingMode.HALF_UP);
+	}
+
+	/** La entrada admite como máximo 8 decimales: cambiar la escala no redondea. */
+	static BigDecimal cantidad(BigDecimal valor) {
+		return valor.setScale(ESCALA_CANTIDAD, RoundingMode.HALF_UP);
+	}
+
+	/** Quita los ceros finales de la columna ({@code 769.570000 → 769.57}) y conserva al menos 2 decimales. */
+	static BigDecimal precio(BigDecimal valor) {
+		BigDecimal sinCeros = valor.stripTrailingZeros();
+		return sinCeros.scale() < ESCALA_MINIMA_PRECIO ? sinCeros.setScale(ESCALA_MINIMA_PRECIO) : sinCeros;
+	}
+
+}

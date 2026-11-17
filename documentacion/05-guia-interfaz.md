@@ -1626,10 +1626,8 @@ En pantallas pequeñas se prioriza:
 
 Los siguientes puntos no se resuelven en el prototipo visual y deben definirse mediante especificaciones:
 
-- validación de ventas contra cantidad disponible;
 - confirmación de fotografías del portafolio;
 - estrategia para corregir registros inmutables;
-- método de costo para ventas;
 - umbral definitivo de desviación de asignación;
 - validaciones de negocio adicionales.
 
@@ -1668,6 +1666,19 @@ del Excel de referencia.
 
 Los datos de aportes del prototipo son simulados. Los valores de
 referencia son los de la hoja Aportes del Excel.
+
+En el formulario de transacciones, el selector de activo muestra todos
+los activos registrados. El tutorial "Registrar compra" del prototipo
+indica que solo aparecen activos en estado ACTIVO, pero los activos no
+tienen estado.
+
+La "cantidad disponible para vender" del formulario de venta la
+calcula el backend (`GET /api/v1/transacciones/disponible`) para la
+fecha elegida. El monto y el efectivo del formulario son solo una
+vista previa; el valor oficial es el que devuelve el backend.
+
+Los datos de transacciones del prototipo son simulados. Los valores de
+referencia son los de la hoja Transacciones del Excel.
 
 ### Regla para implementación
 
