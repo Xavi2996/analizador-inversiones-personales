@@ -1,8 +1,12 @@
 package com.personal.inversiones.referidos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.jayway.jsonpath.JsonPath;
 import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.modelo.Moneda;
 import com.personal.inversiones.activos.modelo.TipoActivo;
@@ -248,7 +253,81 @@ class ReferidoControladorIntegracionTest extends PruebaIntegracion {
 				.andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
 	}
 
+	// --- Consultar (SPEC 004 §3.5) ---
+
+	@Test
+	void listarSinReferidosDevuelveListaVaciaYCeros() throws Exception {
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.referidos").isEmpty())
+				.andExpect(jsonPath("$.totalValorRecibido").value(0.0))
+				.andExpect(jsonPath("$.conteo").value(0))
+				.andExpect(result -> assertThat(result.getResponse().getContentAsString())
+						.contains("\"totalValorRecibido\":0.00"));
+	}
+
+	@Test
+	void listarOrdenaPorFechaEIdDescendentesYCalculaTotales() throws Exception {
+		Long primero = idRegistrado(referido(btc, "2026-10-10", "\"A\"", "0.5", "1.00"));
+		Long tercero = idRegistrado(referido(btc, "2026-10-13", "\"B\"", "0.00001196", "83580.27"));
+		Long segundo = idRegistrado(referido(btc, "2026-10-10", "\"C\"", "1", "2.50"));
+
+		mockMvc.perform(get(RUTA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.referidos[*].id").value(contains(tercero.intValue(), segundo.intValue(),
+						primero.intValue())))
+				.andExpect(jsonPath("$.referidos[0].simbolo").value("BTC"))
+				.andExpect(jsonPath("$.referidos[0].valorRecibido").value(1.0))
+				.andExpect(jsonPath("$.referidos[0].fechaCreacion").doesNotExist())
+				// 0.50 + 1.00 + 2.50
+				.andExpect(jsonPath("$.totalValorRecibido").value(4.0))
+				.andExpect(jsonPath("$.conteo").value(3));
+	}
+
+	@Test
+	void obtenerDevuelveElReferido() throws Exception {
+		Long id = idRegistrado(referido("0.00001196", "83580.27"));
+
+		mockMvc.perform(get(RUTA + "/" + id))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id))
+				.andExpect(jsonPath("$.simbolo").value("BTC"))
+				.andExpect(jsonPath("$.nombreActivo").value("Bitcoin"))
+				.andExpect(jsonPath("$.origen").value("Programa de referidos Hapi"))
+				.andExpect(jsonPath("$.valorRecibido").value(1.0))
+				.andExpect(jsonPath("$.fechaCreacion").doesNotExist());
+	}
+
+	@Test
+	void obtenerInexistenteDevuelve404() throws Exception {
+		mockMvc.perform(get(RUTA + "/999"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.codigo").value("REFERIDO_NO_ENCONTRADO"))
+				.andExpect(jsonPath("$.ruta").value(RUTA + "/999"));
+	}
+
+	@Test
+	void editarOEliminarNoEstanPermitidos() throws Exception {
+		Long id = idRegistrado(referido("1", "100"));
+
+		mockMvc.perform(put(RUTA + "/" + id).contentType(MediaType.APPLICATION_JSON).content(referido("2", "100")))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+		mockMvc.perform(delete(RUTA + "/" + id))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.codigo").value("SOLICITUD_INVALIDA"));
+
+		assertThat(referidoRepositorio.count()).isEqualTo(1);
+		assertThat(referidoRepositorio.findAll().getFirst().getCantidad()).isEqualByComparingTo("1");
+	}
+
 	// --- Utilidades ---
+
+	private Long idRegistrado(String json) throws Exception {
+		String cuerpo = registrar(json).andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		return Long.valueOf(JsonPath.read(cuerpo, "$.id").toString());
+	}
 
 	private ResultActions registrar(String json) throws Exception {
 		return mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(json));

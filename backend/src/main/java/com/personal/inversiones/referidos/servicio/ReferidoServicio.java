@@ -13,13 +13,17 @@ import com.personal.inversiones.activos.modelo.Activo;
 import com.personal.inversiones.activos.servicio.ActivoServicio;
 import com.personal.inversiones.compartido.error.DatosInvalidosExcepcion;
 import com.personal.inversiones.compartido.error.ErrorCampo;
+import com.personal.inversiones.compartido.error.RecursoNoEncontradoExcepcion;
 import com.personal.inversiones.referidos.dto.CrearReferidoSolicitud;
+import com.personal.inversiones.referidos.dto.ListaReferidosRespuesta;
 import com.personal.inversiones.referidos.dto.ReferidoRespuesta;
 import com.personal.inversiones.referidos.modelo.Referido;
 import com.personal.inversiones.referidos.repositorio.ReferidoRepositorio;
 
 @Service
 public class ReferidoServicio {
+
+	public static final String REFERIDO_NO_ENCONTRADO = "REFERIDO_NO_ENCONTRADO";
 
 	/** Montos en USD: se devuelven con 2 decimales. */
 	private static final int ESCALA_MONTO = 2;
@@ -50,6 +54,27 @@ public class ReferidoServicio {
 		Referido referido = new Referido(activo, solicitud.fechaReferido(), solicitud.origen(),
 				solicitud.cantidad(), solicitud.precioAlRecibir(), valorRecibido, solicitud.comentario());
 		return aRespuesta(referidoRepositorio.save(referido));
+	}
+
+	/** Historial por fecha e id descendentes, con el total del valor recibido y el conteo. */
+	@Transactional(readOnly = true)
+	public ListaReferidosRespuesta listar() {
+		List<Referido> referidos = referidoRepositorio.listarConActivo();
+		BigDecimal totalValorRecibido = referidos.stream()
+				.map(Referido::getValorRecibido)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		return new ListaReferidosRespuesta(
+				referidos.stream().map(ReferidoServicio::aRespuesta).toList(),
+				totalValorRecibido.setScale(ESCALA_MONTO, RoundingMode.HALF_UP),
+				referidos.size());
+	}
+
+	@Transactional(readOnly = true)
+	public ReferidoRespuesta obtener(Long id) {
+		return referidoRepositorio.buscarConActivo(id)
+				.map(ReferidoServicio::aRespuesta)
+				.orElseThrow(() -> new RecursoNoEncontradoExcepcion(REFERIDO_NO_ENCONTRADO,
+						"No existe el referido solicitado."));
 	}
 
 	/**

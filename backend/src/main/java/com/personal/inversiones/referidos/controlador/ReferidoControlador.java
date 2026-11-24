@@ -2,12 +2,15 @@ package com.personal.inversiones.referidos.controlador;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.personal.inversiones.referidos.dto.CrearReferidoSolicitud;
+import com.personal.inversiones.referidos.dto.ListaReferidosRespuesta;
 import com.personal.inversiones.referidos.dto.ReferidoRespuesta;
 import com.personal.inversiones.referidos.servicio.ReferidoServicio;
 
@@ -29,6 +32,16 @@ public class ReferidoControlador {
 	@PostMapping
 	public ResponseEntity<ReferidoRespuesta> registrar(@Valid @RequestBody CrearReferidoSolicitud solicitud) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(referidoServicio.registrar(solicitud));
+	}
+
+	@GetMapping
+	public ListaReferidosRespuesta listar() {
+		return referidoServicio.listar();
+	}
+
+	@GetMapping("/{id}")
+	public ReferidoRespuesta obtener(@PathVariable Long id) {
+		return referidoServicio.obtener(id);
 	}
 
 }
