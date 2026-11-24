@@ -484,6 +484,8 @@ Respuesta 200 (`CantidadDisponibleRespuesta`):
 
 La cantidad disponible sigue la regla de 01-modelo-funcional §4.7: el menor saldo entre la fecha indicada y cada fecha posterior con movimientos del activo. Es la misma regla que valida las ventas.
 
+El saldo incluye compras, ventas y referidos del activo.
+
 Errores:
 
 - 400 `DATOS_INVALIDOS` si falta `activoId` o el formato de `fecha` es inválido.
@@ -502,26 +504,53 @@ Solicitud:
 {
 "activoId": 3,
 "fechaReferido": "2026-10-13",
-"origen": "HAPI",
+"origen": "Programa de referidos Hapi",
 "cantidad": 0.00001196,
 "precioAlRecibir": 83580.27,
-"valorRecibido": 1.00,
-"comentario": "Premio por referido"
+"comentario": "Premio Hapi por referido: $1.00 en BTC"
 }
 
-Respuesta 201:
+El backend calculará:
+
+valorRecibido =
+cantidad × precioAlRecibir, redondeado a 2 decimales con `HALF_UP`
+
+Respuesta 201 (`ReferidoRespuesta`):
 
 {
 "id": 1,
 "activoId": 3,
 "simbolo": "BTC",
+"nombreActivo": "Bitcoin",
 "fechaReferido": "2026-10-13",
-"origen": "HAPI",
+"origen": "Programa de referidos Hapi",
 "cantidad": 0.00001196,
 "precioAlRecibir": 83580.27,
 "valorRecibido": 1.00,
-"comentario": "Premio por referido"
+"comentario": "Premio Hapi por referido: $1.00 en BTC"
 }
+
+Reglas:
+
+- `activoId` es obligatorio y debe existir. Se acepta cualquier tipo de activo.
+- `fechaReferido` es obligatoria y no puede ser posterior a la fecha actual de negocio en `America/Guayaquil`.
+- `origen` es obligatorio, texto libre de hasta 100 caracteres. Se recorta y no puede quedar vacío.
+- `cantidad` es obligatoria, mayor que cero y admite como máximo 8 decimales.
+- `precioAlRecibir` es obligatorio, mayor que cero y admite como máximo 6 decimales.
+- `valorRecibido` no se acepta en la solicitud; si llega, se ignora.
+- `comentario` es opcional y admite hasta 500 caracteres. Se recorta; vacío se devuelve como `null`.
+- `cantidad` se devuelve con 8 decimales y `valorRecibido` con 2.
+- Las fechas técnicas no se exponen.
+- La cantidad referida suma a la cantidad disponible para vender desde `fechaReferido` (ver 10.5).
+
+Errores:
+
+- 400 `DATOS_INVALIDOS`, con `erroresCampos`. Incluye la fecha futura (campo `fechaReferido`) y el origen vacío (campo `origen`).
+- 404 `ACTIVO_NO_ENCONTRADO`.
+
+No existen `PUT /api/v1/referidos/{id}` ni `DELETE /api/v1/referidos/{id}`.
+
+El precio actual, el valor actual y la variación del referido se incorporan con el recurso de precios.
 
 ---
 
@@ -529,11 +558,32 @@ Respuesta 201:
 
 GET /api/v1/referidos
 
+Respuesta 200 (`ListaReferidosRespuesta`):
+
+{
+"referidos": [ ReferidoRespuesta, ... ],
+"totalValorRecibido": 1.00,
+"conteo": 1
+}
+
+Reglas:
+
+- `referidos` se ordena por `fechaReferido` descendente y, a igual fecha, por `id` descendente.
+- Sin referidos, `referidos` es `[]`, `totalValorRecibido` vale 0.00 y `conteo` vale 0.
+
+El cálculo de los totales pertenece al backend.
+
 ---
 
 ## 11.3 Obtener referido
 
 GET /api/v1/referidos/{id}
+
+Respuesta 200 con la misma estructura de 11.1.
+
+Errores:
+
+- 404 `REFERIDO_NO_ENCONTRADO`
 
 ---
 
@@ -871,6 +921,8 @@ TRANSACCION_INVALIDA
 
 CANTIDAD_INSUFICIENTE: una venta supera la cantidad disponible para vender en su fecha (409).
 
+REFERIDO_NO_ENCONTRADO
+
 REFERIDO_INVALIDO
 
 DIVIDENDO_INVALIDO
@@ -909,6 +961,7 @@ Los siguientes datos deberán ser calculados principalmente por backend:
 - monto bruto,
 - efectivo neto de la transacción,
 - cantidad disponible para vender,
+- valor recibido del referido,
 - monto neto del dividendo,
 - cantidad actual,
 - costo promedio,

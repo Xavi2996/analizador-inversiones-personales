@@ -211,9 +211,11 @@ La suma de los efectivos netos es el aporte de las transacciones al efectivo dis
 
 ## 4.7 Cantidad disponible para vender
 
-El saldo de un activo al cierre de una fecha D es la cantidad comprada menos la cantidad vendida con fecha menor o igual a D.
+El saldo de un activo al cierre de una fecha D es la cantidad comprada menos la cantidad vendida más la cantidad recibida por referidos, con fecha menor o igual a D.
 
-Las transacciones de un mismo día cuentan como simultáneas.
+Un referido suma su cantidad al saldo desde su fecha de recepción.
+
+Las transacciones y los referidos de un mismo día cuentan como simultáneos.
 
 La cantidad disponible para vender en la fecha D es el menor valor entre:
 
@@ -221,8 +223,6 @@ La cantidad disponible para vender en la fecha D es el menor valor entre:
 - el saldo en cada fecha posterior a D que tenga movimientos del activo.
 
 Una venta en la fecha D no puede superar esa cantidad. Así ninguna venta, aunque se registre con fecha pasada, deja el saldo negativo en ninguna fecha.
-
-Cuando existan referidos, la cantidad referida se suma al saldo.
 
 ---
 
@@ -283,6 +283,12 @@ Los siguientes valores representan el momento en que el referido fue recibido:
 
 Estos valores no deben cambiar posteriormente.
 
+El valor recibido no se ingresa: el sistema lo calcula como:
+
+cantidad × precio al recibir
+
+redondeado a 2 decimales (mitad hacia arriba), igual que el monto bruto de una transacción (sección 4.3).
+
 ---
 
 ## 5.4 Valor actual
@@ -290,6 +296,8 @@ Estos valores no deben cambiar posteriormente.
 El valor actual del referido se calcula como:
 
 cantidad × precio actual del activo
+
+El valor actual y la variación (sección 5.5) dependen de los precios (sección 7) y se incorporan junto con ellos.
 
 ---
 
@@ -303,9 +311,13 @@ valor actual - valor recibido
 
 ## 5.6 Reglas
 
+- La fecha no puede ser posterior a la fecha actual de negocio (ver sección 17).
+- El origen es obligatorio y de texto libre (por ejemplo, `Programa de referidos Hapi`).
 - La cantidad debe ser mayor que cero.
-- El valor recibido debe ser mayor o igual a cero.
-- El referido aumenta la cantidad actual del activo.
+- El precio al recibir debe ser mayor que cero.
+- El valor recibido es mayor o igual a cero; por el redondeo puede ser 0.00.
+- En el MVP un referido no se edita ni se elimina. La corrección de movimientos históricos se definirá en su propia especificación.
+- El referido aumenta la cantidad actual del activo y la cantidad disponible para vender desde su fecha (sección 4.7).
 - El referido no aumenta el total aportado desde bolsillo.
 - El referido no debe registrarse como compra.
 - El referido no debe registrarse como dividendo.

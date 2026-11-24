@@ -722,6 +722,10 @@ Datos actuales:
 
 Los datos actuales no deberán ingresarse manualmente dentro del referido.
 
+El valor recibido tampoco se ingresa: el formulario muestra una vista previa (cantidad × precio al recibir) y el valor oficial lo calcula el backend.
+
+Los datos actuales se incorporan junto con Precios. Hasta entonces la pantalla muestra solo los datos históricos.
+
 ---
 
 # 27. Estados
@@ -1679,6 +1683,19 @@ vista previa; el valor oficial es el que devuelve el backend.
 
 Los datos de transacciones del prototipo son simulados. Los valores de
 referencia son los de la hoja Transacciones del Excel.
+
+En la pantalla Referidos, el grupo de columnas «Hoy · calculado»
+(valor actual, variación y rendimiento) y el total «Valor actual» del
+prototipo se incorporan con la funcionalidad Precios. Mientras tanto no
+se muestran columnas vacías ni marcadores.
+
+En el formulario de referidos, el valor recibido es una vista previa;
+el valor oficial lo calcula el backend. La línea «Valor actual · con el
+precio del …» del formulario también llega con Precios.
+
+Los datos de referidos del prototipo son simulados (por ejemplo, el
+precio $83,612.04). Los valores de referencia son los de la hoja
+Referidos del Excel (precio al recibir 83580.27).
 
 ### Regla para implementación
 
