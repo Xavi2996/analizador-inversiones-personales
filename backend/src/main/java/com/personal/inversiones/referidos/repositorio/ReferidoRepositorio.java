@@ -11,6 +11,8 @@ import com.personal.inversiones.referidos.modelo.Referido;
 
 public interface ReferidoRepositorio extends JpaRepository<Referido, Long> {
 
+	boolean existsByActivoId(Long activoId);
+
 	/** Historial completo con su activo, por fecha descendente y, a igual fecha, por id descendente. */
 	@Query("""
 			SELECT r FROM Referido r JOIN FETCH r.activo

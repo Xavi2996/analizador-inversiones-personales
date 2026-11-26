@@ -321,7 +321,44 @@ class ReferidoControladorIntegracionTest extends PruebaIntegracion {
 		assertThat(referidoRepositorio.findAll().getFirst().getCantidad()).isEqualByComparingTo("1");
 	}
 
+	// --- Bloqueo del símbolo del activo (01-modelo-funcional §2.4) ---
+
+	@Test
+	void activoConReferidoYSinTransaccionesBloqueaElSimbolo() throws Exception {
+		mockMvc.perform(get("/api/v1/activos/" + btc))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simboloEditable").value(true));
+
+		registrar(referido("0.00001196", "83580.27")).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/v1/activos/" + btc))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simboloEditable").value(false));
+		actualizarActivo("BTCX", "CRIPTOMONEDA")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("SIMBOLO_BLOQUEADO"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("simbolo"));
+
+		assertThat(activoRepositorio.findById(btc).orElseThrow().getSimbolo()).isEqualTo("BTC");
+	}
+
+	@Test
+	void activoConReferidoPermiteCambiarElTipo() throws Exception {
+		registrar(referido("0.00001196", "83580.27")).andExpect(status().isCreated());
+
+		actualizarActivo("BTC", "ETF")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.simbolo").value("BTC"))
+				.andExpect(jsonPath("$.tipoActivo").value("ETF"));
+	}
+
 	// --- Utilidades ---
+
+	private ResultActions actualizarActivo(String simbolo, String tipoActivo) throws Exception {
+		return mockMvc.perform(put("/api/v1/activos/" + btc).contentType(MediaType.APPLICATION_JSON).content("""
+				{"simbolo": "%s", "nombre": "Bitcoin", "tipoActivo": "%s", "moneda": "USD"}
+				""".formatted(simbolo, tipoActivo)));
+	}
 
 	private Long idRegistrado(String json) throws Exception {
 		String cuerpo = registrar(json).andExpect(status().isCreated())
