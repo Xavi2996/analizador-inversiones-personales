@@ -352,7 +352,71 @@ class ReferidoControladorIntegracionTest extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tipoActivo").value("ETF"));
 	}
 
+	// --- Cantidad disponible para vender (SPEC 004 §3.3) ---
+
+	@Test
+	void unReferidoPermiteVenderDesdeSuFecha() throws Exception {
+		registrar(referido(btc, "2026-10-10", "\"Hapi\"", "0.5", "60000")).andExpect(status().isCreated());
+
+		registrarTransaccion("VENTA", "2026-10-09", "0.5")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"))
+				.andExpect(jsonPath("$.erroresCampos[0].campo").value("cantidad"));
+		registrarTransaccion("VENTA", "2026-10-12", "0.5").andExpect(status().isCreated());
+	}
+
+	@Test
+	void disponibleIncluyeElReferidoDesdeSuFecha() throws Exception {
+		registrar(referido(btc, "2026-10-10", "\"Hapi\"", "0.5", "60000")).andExpect(status().isCreated());
+
+		assertThat(cuerpoDisponible("2026-10-10")).contains("\"cantidadDisponible\":0.50000000");
+		assertThat(cuerpoDisponible("2026-10-09")).contains("\"cantidadDisponible\":0.00000000");
+	}
+
+	@Test
+	void ventaQueUsaUnReferidoRespetaSuFecha() throws Exception {
+		registrarTransaccion("COMPRA", "2026-10-10", "1.0").andExpect(status().isCreated());
+		registrar(referido(btc, "2026-10-15", "\"Hapi\"", "0.2", "60000")).andExpect(status().isCreated());
+
+		registrarTransaccion("VENTA", "2026-10-14", "1.2")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.codigo").value("CANTIDAD_INSUFICIENTE"));
+		registrarTransaccion("VENTA", "2026-10-20", "1.2").andExpect(status().isCreated());
+	}
+
+	@Test
+	void unReferidoNoCambiaAportesNiTotalesDeTransacciones() throws Exception {
+		registrarTransaccion("COMPRA", "2026-10-10", "1.0").andExpect(status().isCreated());
+
+		registrar(referido("0.00001196", "83580.27")).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/v1/aportes"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.aportes").isEmpty())
+				.andExpect(jsonPath("$.totalAportado").value(0.0));
+		mockMvc.perform(get("/api/v1/transacciones"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.transacciones.length()").value(1))
+				.andExpect(jsonPath("$.totalComprado").value(60000.0))
+				.andExpect(jsonPath("$.totalVendido").value(0.0))
+				.andExpect(jsonPath("$.conteoCompras").value(1));
+	}
+
 	// --- Utilidades ---
+
+	private ResultActions registrarTransaccion(String tipo, String fecha, String cantidad) throws Exception {
+		return mockMvc.perform(post("/api/v1/transacciones").contentType(MediaType.APPLICATION_JSON).content("""
+				{"activoId": %d, "tipoTransaccion": "%s", "fechaTransaccion": "%s",
+				 "cantidad": %s, "precioUnitario": 60000, "comision": 0}
+				""".formatted(btc, tipo, fecha, cantidad)));
+	}
+
+	private String cuerpoDisponible(String fecha) throws Exception {
+		return mockMvc.perform(get("/api/v1/transacciones/disponible")
+				.param("activoId", btc.toString()).param("fecha", fecha))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+	}
 
 	private ResultActions actualizarActivo(String simbolo, String tipoActivo) throws Exception {
 		return mockMvc.perform(put("/api/v1/activos/" + btc).contentType(MediaType.APPLICATION_JSON).content("""

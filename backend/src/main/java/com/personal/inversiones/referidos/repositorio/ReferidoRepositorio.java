@@ -13,6 +13,9 @@ public interface ReferidoRepositorio extends JpaRepository<Referido, Long> {
 
 	boolean existsByActivoId(Long activoId);
 
+	/** Movimientos positivos para la cantidad disponible para vender (SPEC 004 §3.3). */
+	List<Referido> findByActivoId(Long activoId);
+
 	/** Historial completo con su activo, por fecha descendente y, a igual fecha, por id descendente. */
 	@Query("""
 			SELECT r FROM Referido r JOIN FETCH r.activo

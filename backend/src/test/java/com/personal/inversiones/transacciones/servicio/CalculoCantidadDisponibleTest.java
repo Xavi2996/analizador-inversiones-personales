@@ -94,11 +94,33 @@ class CalculoCantidadDisponibleTest {
 		assertThat(disponible(movimientos, "2026-10-22")).isEqualByComparingTo("0.00032988");
 	}
 
+	/** Ejemplo de SPEC 004 §3.3: un referido es un movimiento positivo desde su fecha. */
+	@Test
+	void unReferidoSumaAlSaldoDesdeSuFecha() {
+		List<Movimiento> movimientos = List.of(referido("2026-10-10", "0.5"));
+
+		assertThat(disponible(movimientos, "2026-10-09")).isEqualByComparingTo("0");
+		assertThat(disponible(movimientos, "2026-10-10")).isEqualByComparingTo("0.5");
+		assertThat(disponible(movimientos, "2026-10-12")).isEqualByComparingTo("0.5");
+	}
+
+	@Test
+	void unReferidoPosteriorNoAumentaElDisponibleDeUnaFechaAnterior() {
+		List<Movimiento> movimientos = List.of(compra("2026-10-10", "1.0"), referido("2026-10-15", "0.2"));
+
+		assertThat(disponible(movimientos, "2026-10-14")).isEqualByComparingTo("1.0");
+		assertThat(disponible(movimientos, "2026-10-20")).isEqualByComparingTo("1.2");
+	}
+
 	private static BigDecimal disponible(List<Movimiento> movimientos, String fecha) {
 		return CalculoCantidadDisponible.calcular(movimientos, LocalDate.parse(fecha));
 	}
 
 	private static Movimiento compra(String fecha, String cantidad) {
+		return new Movimiento(LocalDate.parse(fecha), new BigDecimal(cantidad));
+	}
+
+	private static Movimiento referido(String fecha, String cantidad) {
 		return new Movimiento(LocalDate.parse(fecha), new BigDecimal(cantidad));
 	}
 
