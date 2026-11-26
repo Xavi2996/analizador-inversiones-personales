@@ -26,6 +26,7 @@ const GRUPOS_NAVEGACION: GrupoNavegacion[] = [
       { ruta: '/activos', etiqueta: 'Activos', icono: 'M4 7h16v13H4zM8 7V4h8v3' },
       { ruta: '/aportes', etiqueta: 'Aportes', icono: 'M12 3v12M7 10l5 5 5-5M5 21h14' },
       { ruta: '/transacciones', etiqueta: 'Transacciones', icono: 'M7 4 3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7' },
+      { ruta: '/referidos', etiqueta: 'Referidos', icono: 'M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
     ],
   },
 ];

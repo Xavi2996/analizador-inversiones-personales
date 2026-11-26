@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { ActivosPaginaComponent } from './activos/activos-pagina.component';
 import { AportesPaginaComponent } from './aportes/aportes-pagina.component';
 import { LayoutComponent } from './nucleo/layout/layout.component';
+import { ReferidosPaginaComponent } from './referidos/referidos-pagina.component';
 import { TransaccionesPaginaComponent } from './transacciones/transacciones-pagina.component';
 
 export const routes: Routes = [
@@ -18,6 +19,7 @@ export const routes: Routes = [
         component: TransaccionesPaginaComponent,
         title: 'Transacciones · Analizador de Inversiones',
       },
+      { path: 'referidos', component: ReferidosPaginaComponent, title: 'Referidos · Analizador de Inversiones' },
     ],
   },
   { path: '**', redirectTo: '' },

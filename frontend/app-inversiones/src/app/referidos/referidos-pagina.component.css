@@ -1,0 +1,332 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sobretitulo {
+  font-size: 13px;
+  color: var(--color-texto-terciario);
+}
+
+h1 {
+  margin: 6px 0 0;
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+h2 {
+  margin: 0;
+  font-weight: 500;
+  font-size: 17px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.descripcion {
+  margin: 10px 0 0;
+  max-width: 62ch;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-texto-secundario);
+}
+
+.mensaje,
+.vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 0;
+  color: var(--color-texto-secundario);
+}
+
+.mensaje p,
+.vacio p {
+  margin: 0;
+}
+
+.mensaje-error p {
+  color: var(--color-texto);
+}
+
+/* Totales */
+.totales {
+  margin: 0;
+}
+
+.etiqueta {
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--color-texto-secundario);
+}
+
+.cifra {
+  margin: 10px 0 0;
+  line-height: 1;
+}
+
+.cifra-principal {
+  font-weight: 300;
+  font-size: 40px;
+  letter-spacing: -0.035em;
+}
+
+.cifra-nota {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--color-texto-terciario);
+}
+
+/* Historial */
+.historial {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.historial-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.historial-nota {
+  font-size: 13px;
+  color: var(--color-texto-terciario);
+}
+
+.fecha {
+  display: block;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: #cbd5e1;
+}
+
+.origen,
+.nombre {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--color-texto-terciario);
+  overflow-wrap: anywhere;
+}
+
+.comentario {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--color-texto-terciario);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.simbolo {
+  display: block;
+  font: 500 13px/1 var(--fuente-mono);
+  color: var(--color-texto);
+}
+
+.cantidad {
+  display: block;
+  font: 400 13px/1.2 var(--fuente-mono);
+  color: #cbd5e1;
+}
+
+.precio {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--color-texto-secundario);
+}
+
+.destacado {
+  font-weight: 500;
+  color: var(--color-texto);
+}
+
+.grupo-nota {
+  font-weight: 400;
+  color: var(--color-texto-terciario);
+}
+
+.nota {
+  margin: 16px 0 0;
+  max-width: 80ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-texto-terciario);
+}
+
+/* Escritorio: tabla */
+.tabla-contenedor {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 540px;
+  border-collapse: collapse;
+}
+
+th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--color-texto-terciario);
+}
+
+th.grupo {
+  padding-top: 14px;
+  font-size: 13px;
+  color: #cbd5e1;
+  border-bottom: 1px solid #253047;
+}
+
+td {
+  padding: 14px 12px;
+  border-top: 1px solid var(--color-tarjeta);
+  font-size: 14px;
+  vertical-align: top;
+}
+
+thead td {
+  border-top: 0;
+}
+
+th:first-child,
+td:first-child {
+  padding-left: 0;
+}
+
+tbody tr:hover {
+  background: #0f1729;
+}
+
+tfoot th,
+tfoot td {
+  padding-top: 14px;
+  padding-bottom: 0;
+  border-top: 1px solid var(--color-borde);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-texto);
+}
+
+tfoot th {
+  font-size: 13px;
+  color: var(--color-texto-secundario);
+}
+
+.numero {
+  text-align: right;
+}
+
+.total-principal {
+  font-weight: 600;
+}
+
+/* Móvil: lista compacta */
+.tarjetas {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjetas li {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-tarjeta);
+}
+
+.tarjeta-cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tarjeta-detalle {
+  min-width: 0;
+}
+
+.tarjeta-detalle .origen {
+  margin-top: 5px;
+}
+
+.tarjeta-grupo {
+  margin-top: 12px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.tarjetas dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 16px;
+  margin: 10px 0 0;
+}
+
+.tarjetas dt {
+  font-size: 12px;
+  color: var(--color-texto-terciario);
+}
+
+.tarjetas dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.tarjetas dd.precio {
+  font-size: 13px;
+}
+
+.tarjetas .tarjeta-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-texto-secundario);
+}
+
+.tarjeta-total .total-principal {
+  font-size: 14px;
+  color: var(--color-texto);
+}
+
+@media (max-width: 879.98px) {
+  .tabla-contenedor {
+    display: none;
+  }
+
+  .tarjetas {
+    display: block;
+  }
+
+  .cifra-principal {
+    font-size: 32px;
+  }
+}
