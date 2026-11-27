@@ -1,9 +1,13 @@
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { ReferidoFormComponent } from './referido-form.component';
 import { ListaReferidos } from './referido.model';
 import { ReferidoService } from './referido.service';
 
 type EstadoCarga = 'cargando' | 'listo' | 'error';
+
+/** Tiempo que el aviso permanece visible (guía §39: desaparece sin bloquear). */
+const DURACION_AVISO_MS = 4000;
 
 /**
  * Pantalla Referidos: total del valor al recibir e historial.
@@ -12,7 +16,7 @@ type EstadoCarga = 'cargando' | 'listo' | 'error';
  */
 @Component({
   selector: 'app-referidos-pagina',
-  imports: [CurrencyPipe, DecimalPipe],
+  imports: [CurrencyPipe, DecimalPipe, ReferidoFormComponent],
   templateUrl: './referidos-pagina.component.html',
   styleUrl: './referidos-pagina.component.css',
 })
@@ -22,6 +26,13 @@ export class ReferidosPaginaComponent implements OnInit {
   protected readonly estado = signal<EstadoCarga>('cargando');
   protected readonly lista = signal<ListaReferidos | null>(null);
   protected readonly formularioAbierto = signal(false);
+  protected readonly aviso = signal<string | null>(null);
+
+  private temporizadorAviso?: ReturnType<typeof setTimeout>;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.temporizadorAviso));
+  }
 
   ngOnInit(): void {
     this.cargar();
@@ -43,6 +54,15 @@ export class ReferidosPaginaComponent implements OnInit {
 
   protected abrirRegistro(): void {
     this.formularioAbierto.set(true);
+  }
+
+  /** Cierra el panel, confirma el registro y recarga historial, total y conteo. */
+  protected alGuardar(): void {
+    this.formularioAbierto.set(false);
+    clearTimeout(this.temporizadorAviso);
+    this.aviso.set('Referido registrado correctamente.');
+    this.temporizadorAviso = setTimeout(() => this.aviso.set(null), DURACION_AVISO_MS);
+    this.cargar(true);
   }
 
   protected referidos(conteo: number): string {

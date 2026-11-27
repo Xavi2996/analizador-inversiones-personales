@@ -177,4 +177,36 @@ describe('ReferidosPaginaComponent', () => {
 
     expect(texto('.encabezado button')).toBe('Registrar referido');
   });
+
+  it('abre el formulario desde el estado vacío y lo cierra al cancelar', () => {
+    responder(LISTA_VACIA);
+
+    elemento.querySelector<HTMLButtonElement>('.vacio button')!.click();
+    fixture.detectChanges();
+    expect(elemento.querySelector('app-referido-form')).not.toBeNull();
+    http.expectOne('/api/v1/activos').flush([]);
+
+    fixture.debugElement.query((nodo) => nodo.name === 'app-referido-form').triggerEventHandler('cerrado');
+    fixture.detectChanges();
+    expect(elemento.querySelector('app-referido-form')).toBeNull();
+  });
+
+  it('al registrar cierra el panel, confirma y recarga sin ocultar el historial', () => {
+    responder(LISTA);
+    elemento.querySelector<HTMLButtonElement>('.encabezado button')!.click();
+    fixture.detectChanges();
+    http.expectOne('/api/v1/activos').flush([]);
+
+    // El formulario emite al registrar (sus pruebas cubren el envío).
+    fixture.debugElement.query((nodo) => nodo.name === 'app-referido-form').triggerEventHandler('guardado');
+    fixture.detectChanges();
+
+    expect(elemento.querySelector('app-referido-form')).toBeNull();
+    expect(texto('.aviso')).toBe('✓ Referido registrado correctamente.');
+    // Recarga silenciosa: el historial sigue visible mientras llega la respuesta.
+    expect(elemento.querySelectorAll('tbody tr').length).toBe(2);
+
+    responder({ ...LISTA, totalValorRecibido: 5.0, conteo: 3 });
+    expect(texto('.cifra-principal')).toBe('$5.00');
+  });
 });
