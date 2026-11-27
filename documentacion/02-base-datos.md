@@ -302,10 +302,10 @@ referido
 
 ## Campos
 
-- id BIGINT
+- id BIGINT GENERATED ALWAYS AS IDENTITY
 - activo_id BIGINT NOT NULL
 - fecha_referido DATE NOT NULL
-- origen VARCHAR(100)
+- origen VARCHAR(100) NOT NULL
 - cantidad NUMERIC(28,12) NOT NULL
 - precio_al_recibir NUMERIC(19,6) NOT NULL
 - valor_recibido NUMERIC(19,6) NOT NULL
@@ -315,14 +315,24 @@ referido
 
 ## Relación
 
-activo_id
+fk_referido_activo: activo_id
 → activo.id
+
+## Restricciones
+
+- PRIMARY KEY(id)
+- ck_referido_cantidad: cantidad > 0
+- ck_referido_precio: precio_al_recibir > 0
+- ck_referido_valor_recibido: valor_recibido = ROUND(cantidad * precio_al_recibir, 2)
+
+La última restricción implica valor_recibido >= 0.
 
 ## Reglas
 
-- cantidad > 0
-- precio_al_recibir > 0
-- valor_recibido >= 0
+- `valor_recibido` lo calcula el backend y se guarda para conservar el hecho histórico.
+- `origen` es texto libre obligatorio (por ejemplo, `Programa de referidos Hapi`). No es un catálogo.
+- La aplicación limita la entrada a 8 decimales en `cantidad` y 6 en `precio_al_recibir`.
+- `comentario` es opcional. La aplicación limita su longitud a 500 caracteres y guarda vacío como NULL.
 
 Los datos:
 
@@ -331,6 +341,10 @@ Los datos:
 - valor_recibido
 
 representan información histórica y no deben recalcularse posteriormente.
+
+## Índices
+
+- ix_referido_activo_fecha: activo_id + fecha_referido
 
 ---
 

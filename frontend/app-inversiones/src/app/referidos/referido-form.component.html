@@ -1,0 +1,173 @@
+<dialog
+  #dialogo
+  class="panel"
+  aria-labelledby="referido-titulo"
+  (cancel)="alCancelar($event)"
+  (click)="alHacerClic($event)"
+>
+  <div class="panel-contenido">
+    <header class="panel-encabezado">
+      <div>
+        <div class="sobretitulo">Nuevo referido</div>
+        <h2 id="referido-titulo">Registrar referido</h2>
+        <p class="subtitulo">Ingresa lo que recibiste; el valor recibido se calcula.</p>
+      </div>
+      <button type="button" class="cerrar" aria-label="Cerrar" [disabled]="guardando()" (click)="cerrar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </button>
+    </header>
+
+    <form class="formulario" [formGroup]="formulario" (ngSubmit)="guardar()" novalidate>
+      @if (errorGeneral(); as mensaje) {
+        <p class="error-general" role="alert" tabindex="-1">
+          <span class="error-general-icono" aria-hidden="true">⚠</span>{{ mensaje }}
+        </p>
+      }
+
+      <div class="rejilla">
+        <div class="campo">
+          <label class="campo-etiqueta" for="referido-fecha">Fecha *</label>
+          <input
+            id="referido-fecha"
+            type="date"
+            class="campo-control fecha"
+            formControlName="fechaReferido"
+            aria-required="true"
+            [attr.aria-invalid]="error('fechaReferido') ? true : null"
+            [attr.aria-describedby]="error('fechaReferido') ? 'referido-fecha-error' : null"
+          />
+          @if (error('fechaReferido'); as mensaje) {
+            <p id="referido-fecha-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo-etiqueta" for="referido-activo">Activo *</label>
+          <select
+            id="referido-activo"
+            class="campo-control"
+            formControlName="activoId"
+            aria-required="true"
+            [attr.aria-invalid]="error('activoId') ? true : null"
+            [attr.aria-describedby]="error('activoId') ? 'referido-activo-error' : null"
+          >
+            <option value="" disabled>
+              {{ estadoActivos() === 'cargando' ? 'Cargando activos…' : 'Elige un activo' }}
+            </option>
+            @for (activo of activos(); track activo.id) {
+              <option [value]="activo.id">{{ activo.simbolo }} · {{ activo.nombre }}</option>
+            }
+          </select>
+          @if (error('activoId'); as mensaje) {
+            <p id="referido-activo-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+          }
+          @if (estadoActivos() === 'error') {
+            <p class="activos-error" role="alert">
+              No fue posible cargar los activos.
+              <button type="button" class="enlace" (click)="cargarActivos()">Reintentar</button>
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="referido-origen">Origen *</label>
+        <input
+          id="referido-origen"
+          class="campo-control"
+          formControlName="origen"
+          placeholder="Programa de referidos Hapi"
+          autocomplete="off"
+          aria-required="true"
+          [attr.aria-invalid]="error('origen') ? true : null"
+          [attr.aria-describedby]="error('origen') ? 'referido-origen-error' : null"
+        />
+        @if (error('origen'); as mensaje) {
+          <p id="referido-origen-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="rejilla">
+        <div class="campo">
+          <label class="campo-etiqueta" for="referido-cantidad">Cantidad recibida *</label>
+          <input
+            id="referido-cantidad"
+            class="campo-control cantidad"
+            formControlName="cantidad"
+            inputmode="decimal"
+            placeholder="0.00000000"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-invalid]="error('cantidad') ? true : null"
+            [attr.aria-describedby]="error('cantidad') ? 'referido-cantidad-error' : null"
+          />
+          @if (error('cantidad'); as mensaje) {
+            <p id="referido-cantidad-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+          }
+        </div>
+
+        <div class="campo">
+          <label class="campo-etiqueta" for="referido-precio">Precio al recibir (USD) *</label>
+          <div class="con-prefijo">
+            <span class="prefijo" aria-hidden="true">$</span>
+            <input
+              id="referido-precio"
+              class="campo-control"
+              formControlName="precioAlRecibir"
+              inputmode="decimal"
+              placeholder="0.00"
+              autocomplete="off"
+              aria-required="true"
+              [attr.aria-invalid]="error('precioAlRecibir') ? true : null"
+              [attr.aria-describedby]="error('precioAlRecibir') ? 'referido-precio-error' : null"
+            />
+          </div>
+          @if (error('precioAlRecibir'); as mensaje) {
+            <p id="referido-precio-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="calculado" aria-label="Valor calculado">
+        <div class="calculado-detalle">
+          <span class="calculado-titulo">Valor recibido</span>
+          <span class="calculado-nota">
+            Calculado
+            @if (previa(); as p) {
+              · {{ p.cantidad }} × {{ p.precio | currency: 'USD' : 'symbol' : '1.2-6' }}
+            }
+          </span>
+        </div>
+        <div class="calculado-valor">{{ previa() ? (previa()!.valor | currency: 'USD') : '—' }}</div>
+      </div>
+
+      <div class="campo">
+        <label class="campo-etiqueta" for="referido-comentario">
+          Comentario <span class="opcional">· opcional</span>
+        </label>
+        <textarea
+          id="referido-comentario"
+          class="campo-control comentario"
+          formControlName="comentario"
+          rows="2"
+          [attr.aria-invalid]="error('comentario') ? true : null"
+          [attr.aria-describedby]="error('comentario') ? 'referido-comentario-error' : null"
+        ></textarea>
+        @if (error('comentario'); as mensaje) {
+          <p id="referido-comentario-error" class="campo-error"><span aria-hidden="true">⚠</span>{{ mensaje }}</p>
+        }
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton boton-primario" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Registrar referido' }}
+        </button>
+        <button type="button" class="boton boton-texto cancelar" [disabled]="guardando()" (click)="cerrar()">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

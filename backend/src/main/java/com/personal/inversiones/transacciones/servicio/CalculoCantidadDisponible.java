@@ -21,7 +21,7 @@ import java.util.TreeMap;
 public final class CalculoCantidadDisponible {
 
 	/**
-	 * Movimiento de cantidad con signo: positivo si entra al portafolio (compra; en el futuro, referido),
+	 * Movimiento de cantidad con signo: positivo si entra al portafolio (compra o referido),
 	 * negativo si sale (venta).
 	 */
 	public record Movimiento(LocalDate fecha, BigDecimal cantidad) {

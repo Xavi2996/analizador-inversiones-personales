@@ -16,6 +16,8 @@ import com.personal.inversiones.compartido.error.ConflictoExcepcion;
 import com.personal.inversiones.compartido.error.DatosInvalidosExcepcion;
 import com.personal.inversiones.compartido.error.ErrorCampo;
 import com.personal.inversiones.compartido.error.RecursoNoEncontradoExcepcion;
+import com.personal.inversiones.referidos.modelo.Referido;
+import com.personal.inversiones.referidos.repositorio.ReferidoRepositorio;
 import com.personal.inversiones.transacciones.dto.CantidadDisponibleRespuesta;
 import com.personal.inversiones.transacciones.dto.CrearTransaccionSolicitud;
 import com.personal.inversiones.transacciones.dto.ListaTransaccionesRespuesta;
@@ -39,12 +41,14 @@ public class TransaccionServicio {
 	private static final int ESCALA_MINIMA_PRECIO = 2;
 
 	private final TransaccionRepositorio transaccionRepositorio;
+	private final ReferidoRepositorio referidoRepositorio;
 	private final ActivoServicio activoServicio;
 	private final Clock clock;
 
-	public TransaccionServicio(TransaccionRepositorio transaccionRepositorio, ActivoServicio activoServicio,
-			Clock clock) {
+	public TransaccionServicio(TransaccionRepositorio transaccionRepositorio, ReferidoRepositorio referidoRepositorio,
+			ActivoServicio activoServicio, Clock clock) {
 		this.transaccionRepositorio = transaccionRepositorio;
+		this.referidoRepositorio = referidoRepositorio;
 		this.activoServicio = activoServicio;
 		this.clock = clock;
 	}
@@ -126,11 +130,22 @@ public class TransaccionServicio {
 				cantidad(cantidadDisponible(activoId, fechaConsulta)));
 	}
 
+	/**
+	 * Compras y referidos entran al saldo; ventas salen (SPEC 004 §3.3).
+	 */
 	private BigDecimal cantidadDisponible(Long activoId, LocalDate fecha) {
-		List<Movimiento> movimientos = transaccionRepositorio.findByActivoId(activoId).stream()
+		List<Movimiento> movimientos = new ArrayList<>();
+		transaccionRepositorio.findByActivoId(activoId).stream()
 				.map(TransaccionServicio::aMovimiento)
-				.toList();
+				.forEach(movimientos::add);
+		referidoRepositorio.findByActivoId(activoId).stream()
+				.map(TransaccionServicio::aMovimiento)
+				.forEach(movimientos::add);
 		return CalculoCantidadDisponible.calcular(movimientos, fecha);
+	}
+
+	private static Movimiento aMovimiento(Referido referido) {
+		return new Movimiento(referido.getFechaReferido(), referido.getCantidad());
 	}
 
 	private static Movimiento aMovimiento(Transaccion transaccion) {

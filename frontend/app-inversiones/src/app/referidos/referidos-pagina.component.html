@@ -1,0 +1,155 @@
+<div class="pagina">
+  <header class="encabezado">
+    <div>
+      <div class="sobretitulo">Registro</div>
+      <h1>Referidos</h1>
+      <p class="descripcion">
+        Activos recibidos sin costo por programas de referidos. Suman a la cantidad de la posición, pero no al
+        costo de compras.
+      </p>
+    </div>
+    @if (estado() === 'listo' && (lista()?.referidos?.length ?? 0) > 0) {
+      <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Registrar referido
+      </button>
+    }
+  </header>
+
+  @switch (estado()) {
+    @case ('cargando') {
+      <p class="mensaje" role="status">Cargando referidos…</p>
+    }
+
+    @case ('error') {
+      <div class="mensaje mensaje-error" role="alert">
+        <p>No fue posible cargar los referidos. Comprueba que el servidor esté disponible e inténtalo de nuevo.</p>
+        <button type="button" class="boton boton-secundario" (click)="cargar()">Reintentar</button>
+      </div>
+    }
+
+    @case ('listo') {
+      @if (lista(); as datos) {
+        @if (datos.referidos.length === 0) {
+          <div class="vacio">
+            <p>No existen referidos registrados.</p>
+            <button type="button" class="boton boton-primario" (click)="abrirRegistro()">
+              Registrar primer referido
+            </button>
+          </div>
+        } @else {
+          <dl class="totales" aria-label="Totales">
+            <div>
+              <dt class="etiqueta">Valor al recibir</dt>
+              <dd class="cifra cifra-principal">{{ datos.totalValorRecibido | currency: 'USD' }}</dd>
+              <dd class="cifra-nota">Histórico · {{ referidos(datos.conteo) }}</dd>
+            </div>
+          </dl>
+
+          <section class="historial">
+            <div class="historial-encabezado">
+              <h2>Historial</h2>
+              <span class="historial-nota">{{ referidos(datos.conteo) }} · más reciente primero</span>
+            </div>
+
+            <div class="tabla-contenedor" role="region" aria-label="Historial de referidos" tabindex="0">
+              <table>
+                <thead>
+                  <tr>
+                    <td colspan="2"></td>
+                    <th scope="colgroup" colspan="2" class="grupo">
+                      Al recibir <span class="grupo-nota">· histórico</span>
+                    </th>
+                  </tr>
+                  <tr>
+                    <th scope="col">Fecha y origen</th>
+                    <th scope="col">Activo</th>
+                    <th scope="col" class="numero">Cantidad × precio</th>
+                    <th scope="col" class="numero">Valor recibido</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (referido of datos.referidos; track referido.id) {
+                    <tr>
+                      <td>
+                        <span class="fecha">{{ fecha(referido.fechaReferido) }}</span>
+                        <span class="origen">{{ referido.origen }}</span>
+                        @if (referido.comentario) {
+                          <span class="comentario">{{ referido.comentario }}</span>
+                        }
+                      </td>
+                      <td>
+                        <span class="simbolo">{{ referido.simbolo }}</span>
+                        <span class="nombre">{{ referido.nombreActivo }}</span>
+                      </td>
+                      <td class="numero">
+                        <span class="cantidad">{{ referido.cantidad | number: '1.8-8' }}</span>
+                        <span class="precio">× {{ referido.precioAlRecibir | currency: 'USD' : 'symbol' : '1.2-6' }}</span>
+                      </td>
+                      <td class="numero destacado">{{ referido.valorRecibido | currency: 'USD' }}</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row" colspan="3">Total</th>
+                    <td class="numero total-principal">{{ datos.totalValorRecibido | currency: 'USD' }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <ul class="tarjetas" aria-label="Historial de referidos">
+              @for (referido of datos.referidos; track referido.id) {
+                <li>
+                  <div class="tarjeta-cabecera">
+                    <span class="tarjeta-detalle">
+                      <span class="simbolo">{{ referido.simbolo }}</span>
+                      <span class="origen">{{ fecha(referido.fechaReferido) }} · {{ referido.origen }}</span>
+                      @if (referido.comentario) {
+                        <span class="comentario">{{ referido.comentario }}</span>
+                      }
+                    </span>
+                  </div>
+                  <div class="tarjeta-grupo">Al recibir <span class="grupo-nota">· histórico</span></div>
+                  <dl>
+                    <div>
+                      <dt>Cantidad × precio</dt>
+                      <dd class="cantidad">{{ referido.cantidad | number: '1.8-8' }}</dd>
+                      <dd class="precio">× {{ referido.precioAlRecibir | currency: 'USD' : 'symbol' : '1.2-6' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Valor recibido</dt>
+                      <dd class="destacado">{{ referido.valorRecibido | currency: 'USD' }}</dd>
+                    </div>
+                  </dl>
+                </li>
+              }
+              <li class="tarjeta-total">
+                <span>Total</span>
+                <span class="total-principal">{{ datos.totalValorRecibido | currency: 'USD' }}</span>
+              </li>
+            </ul>
+
+            <p class="nota">Los valores «Al recibir» quedan fijos tal como se registraron.</p>
+          </section>
+        }
+      }
+    }
+  }
+</div>
+
+@if (formularioAbierto()) {
+  <app-referido-form (guardado)="alGuardar()" (cerrado)="formularioAbierto.set(false)" />
+}
+
+<div class="aviso-region" role="status" aria-live="polite">
+  @if (aviso(); as mensaje) {
+    <div class="aviso">
+      <span class="aviso-icono" aria-hidden="true">✓</span>
+      {{ mensaje }}
+    </div>
+  }
+</div>

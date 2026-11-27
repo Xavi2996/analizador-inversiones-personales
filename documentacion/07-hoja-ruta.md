@@ -433,7 +433,9 @@ Implementar:
 - registro;
 - consulta;
 - cálculo del valor recibido;
-- cálculo del valor actual.
+- suma de la cantidad referida a la cantidad disponible para vender.
+
+El cálculo del valor actual y de la variación depende de los precios y se realiza en FASE 7.
 
 ---
 
@@ -445,17 +447,9 @@ Implementar:
 Referidos
 ```
 
-Diferenciar claramente:
+Mostrar los datos históricos al recibir.
 
-```text
-datos históricos al recibir
-```
-
-de:
-
-```text
-datos calculados actualmente
-```
+Los datos calculados actualmente se agregan en FASE 7, diferenciados claramente de los históricos.
 
 ---
 
@@ -529,7 +523,8 @@ Implementar:
 - tabla `precio_activo`;
 - registro manual;
 - consulta histórica;
-- obtención del último precio de cada activo.
+- obtención del último precio de cada activo;
+- precio actual, valor actual, variación y rendimiento de cada referido (01-modelo-funcional §5.4 y §5.5).
 
 Inicialmente no habrá integración automática con proveedores externos.
 
@@ -549,6 +544,8 @@ Debe permitir:
 - consultar último precio;
 - consultar historial;
 - visualizar variaciones.
+
+Agregar a la pantalla Referidos los datos calculados actualmente (valor actual, variación y rendimiento), diferenciados de los datos históricos al recibir.
 
 ---
 

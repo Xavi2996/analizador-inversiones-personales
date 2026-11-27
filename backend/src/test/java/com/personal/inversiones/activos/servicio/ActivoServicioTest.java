@@ -22,6 +22,7 @@ import com.personal.inversiones.activos.modelo.Moneda;
 import com.personal.inversiones.activos.modelo.TipoActivo;
 import com.personal.inversiones.activos.repositorio.ActivoRepositorio;
 import com.personal.inversiones.compartido.error.ConflictoExcepcion;
+import com.personal.inversiones.referidos.repositorio.ReferidoRepositorio;
 import com.personal.inversiones.transacciones.repositorio.TransaccionRepositorio;
 
 /**
@@ -39,7 +40,8 @@ class ActivoServicioTest {
 	@BeforeEach
 	void preparar() {
 		activoRepositorio = mock(ActivoRepositorio.class);
-		activoServicio = spy(new ActivoServicio(activoRepositorio, mock(TransaccionRepositorio.class)));
+		activoServicio = spy(new ActivoServicio(activoRepositorio, mock(TransaccionRepositorio.class),
+				mock(ReferidoRepositorio.class)));
 		// any(): el activo simulado no tiene id asignado, y la respuesta también consulta el bloqueo.
 		doReturn(true).when(activoServicio).tieneRegistrosHistoricos(any());
 
